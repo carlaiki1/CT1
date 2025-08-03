@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptocurrency Trading Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #28a745; }
+        .status-inactive { background-color: #dc3545; }
+        .profit { color: #28a745; }
+        .loss { color: #dc3545; }
+        .chart-container {
+            height: 400px;
+        }
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-robot me-2"></i>
+                Crypto Trading Agent
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text">
+                    <span id="trading-status" class="status-indicator status-inactive"></span>
+                    <span id="trading-status-text">Inactive</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Control Panel</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button id="start-trading" class="btn btn-success me-2">
+                                    <i class="fas fa-play me-1"></i>Start Trading
+                                </button>
+                                <button id="stop-trading" class="btn btn-danger me-2">
+                                    <i class="fas fa-stop me-1"></i>Stop Trading
+                                </button>
+                                <button id="run-backtest" class="btn btn-info">
+                                    <i class="fas fa-chart-line me-1"></i>Run Backtest
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="form-check form-switch d-inline-block me-3">
+                                    <input class="form-check-input" type="checkbox" id="demo-mode" checked>
+                                    <label class="form-check-label" for="demo-mode">Demo Mode</label>
+                                </div>
+                                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#configModal">
+                                    <i class="fas fa-cog me-1"></i>Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-muted">Total P&L</h5>
+                        <h3 id="total-pnl" class="mb-0">$0.00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-muted">Win Rate</h5>
+                        <h3 id="win-rate" class="mb-0">0%</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-muted">Open Positions</h5>
+                        <h3 id="open-positions" class="mb-0">0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title text-muted">Total Trades</h5>
+                        <h3 id="total-trades" class="mb-0">0</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="row">
+            <!-- Positions -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Open Positions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="positions-table">
+                            <p class="text-muted text-center">No open positions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Trades</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="trades-table">
+                            <p class="text-muted text-center">No trades yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Symbol Analysis -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Symbol Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select id="symbol-select" class="form-select">
+                                    <option value="">Select a symbol...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button id="analyze-btn" class="btn btn-primary">Analyze</button>
+                            </div>
+                        </div>
+                        <div id="analysis-results"></div>
+                        <div id="price-chart" class="chart-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configuration</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="config-form">
+                        <div class="mb-3">
+                            <label for="api-key" class="form-label">API Key</label>
+                            <input type="text" class="form-control" id="api-key" placeholder="Your Coinbase API Key">
+                        </div>
+                        <div class="mb-3">
+                            <label for="api-secret" class="form-label">API Secret</label>
+                            <input type="password" class="form-control" id="api-secret" placeholder="Your Coinbase API Secret">
+                        </div>
+                        <div class="mb-3">
+                            <label for="passphrase" class="form-label">Passphrase</label>
+                            <input type="password" class="form-control" id="passphrase" placeholder="Your Coinbase Passphrase">
+                        </div>
+                        <div class="mb-3">
+                            <label for="risk-percentage" class="form-label">Risk Percentage</label>
+                            <input type="number" class="form-control" id="risk-percentage" value="2" min="0.1" max="10" step="0.1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="max-positions" class="form-label">Max Positions</label>
+                            <input type="number" class="form-control" id="max-positions" value="5" min="1" max="20">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-config">Save Configuration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let tradingActive = false;
+        let updateInterval;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSymbols();
+            updateDashboard();
+            startAutoUpdate();
+            
+            // Event listeners
+            document.getElementById('start-trading').addEventListener('click', startTrading);
+            document.getElementById('stop-trading').addEventListener('click', stopTrading);
+            document.getElementById('run-backtest').addEventListener('click', runBacktest);
+            document.getElementById('analyze-btn').addEventListener('click', analyzeSymbol);
+            document.getElementById('save-config').addEventListener('click', saveConfiguration);
+        });
+
+        // Load available symbols
+        async function loadSymbols() {
+            try {
+                const response = await fetch('/api/symbols');
+                const symbols = await response.json();
+                
+                const select = document.getElementById('symbol-select');
+                select.innerHTML = '<option value="">Select a symbol...</option>';
+                
+                symbols.forEach(symbol => {
+                    const option = document.createElement('option');
+                    option.value = symbol;
+                    option.textContent = symbol;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading symbols:', error);
+            }
+        }
+
+        // Update dashboard data
+        async function updateDashboard() {
+            try {
+                // Update trading status
+                const statusResponse = await fetch('/api/trading/status');
+                const status = await statusResponse.json();
+                updateTradingStatus(status.active);
+
+                // Update performance metrics
+                const perfResponse = await fetch('/api/performance');
+                const performance = await perfResponse.json();
+                updateMetrics(performance);
+
+                // Update positions
+                const positionsResponse = await fetch('/api/positions');
+                const positions = await positionsResponse.json();
+                updatePositionsTable(positions);
+
+                // Update trades
+                const tradesResponse = await fetch('/api/trades');
+                const trades = await tradesResponse.json();
+                updateTradesTable(trades);
+
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+            }
+        }
+
+        // Update trading status indicator
+        function updateTradingStatus(active) {
+            tradingActive = active;
+            const indicator = document.getElementById('trading-status');
+            const text = document.getElementById('trading-status-text');
+            
+            if (active) {
+                indicator.className = 'status-indicator status-active';
+                text.textContent = 'Active';
+            } else {
+                indicator.className = 'status-indicator status-inactive';
+                text.textContent = 'Inactive';
+            }
+        }
+
+        // Update metrics cards
+        function updateMetrics(performance) {
+            document.getElementById('total-pnl').textContent = `$${(performance.total_pnl || 0).toFixed(2)}`;
+            document.getElementById('win-rate').textContent = `${(performance.win_rate || 0).toFixed(1)}%`;
+            document.getElementById('open-positions').textContent = performance.open_positions || 0;
+            document.getElementById('total-trades').textContent = performance.total_trades || 0;
+
+            // Color code P&L
+            const pnlElement = document.getElementById('total-pnl');
+            if (performance.total_pnl > 0) {
+                pnlElement.className = 'mb-0 profit';
+            } else if (performance.total_pnl < 0) {
+                pnlElement.className = 'mb-0 loss';
+            } else {
+                pnlElement.className = 'mb-0';
+            }
+        }
+
+        // Update positions table
+        function updatePositionsTable(positions) {
+            const container = document.getElementById('positions-table');
+            
+            if (!positions || positions.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No open positions</p>';
+                return;
+            }
+
+            let html = '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Symbol</th><th>Side</th><th>Amount</th><th>Entry</th><th>Current</th><th>P&L</th></tr></thead><tbody>';
+            
+            positions.forEach(position => {
+                const pnlClass = position.pnl >= 0 ? 'profit' : 'loss';
+                html += `<tr>
+                    <td>${position.symbol}</td>
+                    <td><span class="badge bg-${position.side === 'buy' ? 'success' : 'danger'}">${position.side.toUpperCase()}</span></td>
+                    <td>${position.amount.toFixed(6)}</td>
+                    <td>$${position.entry_price.toFixed(2)}</td>
+                    <td>$${position.current_price.toFixed(2)}</td>
+                    <td class="${pnlClass}">$${position.pnl.toFixed(2)} (${position.pnl_percentage.toFixed(2)}%)</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // Update trades table
+        function updateTradesTable(trades) {
+            const container = document.getElementById('trades-table');
+            
+            if (!trades || trades.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">No trades yet</p>';
+                return;
+            }
+
+            // Show last 5 trades
+            const recentTrades = trades.slice(-5).reverse();
+            
+            let html = '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Symbol</th><th>Side</th><th>Amount</th><th>Price</th><th>Time</th></tr></thead><tbody>';
+            
+            recentTrades.forEach(trade => {
+                const date = new Date(trade.timestamp).toLocaleString();
+                html += `<tr>
+                    <td>${trade.symbol}</td>
+                    <td><span class="badge bg-${trade.side === 'buy' ? 'success' : 'danger'}">${trade.side.toUpperCase()}</span></td>
+                    <td>${trade.amount.toFixed(6)}</td>
+                    <td>$${trade.price.toFixed(2)}</td>
+                    <td>${date}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // Start trading
+        async function startTrading() {
+            try {
+                const response = await fetch('/api/trading/start', { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Trading started successfully!', 'success');
+                } else {
+                    showAlert(result.error || 'Failed to start trading', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error starting trading: ' + error.message, 'danger');
+            }
+        }
+
+        // Stop trading
+        async function stopTrading() {
+            try {
+                const response = await fetch('/api/trading/stop', { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Trading stopped successfully!', 'warning');
+                } else {
+                    showAlert(result.error || 'Failed to stop trading', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error stopping trading: ' + error.message, 'danger');
+            }
+        }
+
+        // Run backtest
+        async function runBacktest() {
+            try {
+                showAlert('Starting backtest... This may take several minutes.', 'info');
+                
+                const response = await fetch('/api/backtest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ years: 3 })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Backtest completed! Check the backtest_results directory for detailed results.', 'success');
+                } else {
+                    showAlert(result.error || 'Failed to run backtest', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error running backtest: ' + error.message, 'danger');
+            }
+        }
+
+        // Analyze symbol
+        async function analyzeSymbol() {
+            const symbol = document.getElementById('symbol-select').value;
+            if (!symbol) {
+                showAlert('Please select a symbol to analyze', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/analyze/${symbol}`);
+                const analysis = await response.json();
+                
+                if (response.ok) {
+                    displayAnalysis(analysis);
+                    loadChart(symbol);
+                } else {
+                    showAlert(analysis.error || 'Failed to analyze symbol', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error analyzing symbol: ' + error.message, 'danger');
+            }
+        }
+
+        // Display analysis results
+        function displayAnalysis(analysis) {
+            const container = document.getElementById('analysis-results');
+            
+            let html = `<div class="row mb-3">
+                <div class="col-md-6">
+                    <h6>Current Price: $${analysis.current_price.toFixed(2)}</h6>
+                </div>
+                <div class="col-md-6">
+                    <h6>Consensus: <span class="badge bg-${getSignalColor(analysis.consensus.signal)}">${analysis.consensus.signal}</span></h6>
+                </div>
+            </div>`;
+            
+            html += '<div class="table-responsive"><table class="table table-sm">';
+            html += '<thead><tr><th>Strategy</th><th>Signal</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>';
+            
+            analysis.signals.forEach(signal => {
+                html += `<tr>
+                    <td>${signal.strategy}</td>
+                    <td><span class="badge bg-${getSignalColor(signal.signal)}">${signal.signal}</span></td>
+                    <td>${(signal.confidence * 100).toFixed(1)}%</td>
+                    <td><small>${signal.reason}</small></td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // Get signal color
+        function getSignalColor(signal) {
+            switch(signal) {
+                case 'BUY': return 'success';
+                case 'SELL': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        // Load price chart
+        async function loadChart(symbol) {
+            try {
+                const response = await fetch(`/api/chart/${symbol}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const chartData = JSON.parse(data.chart);
+                    Plotly.newPlot('price-chart', chartData.data, chartData.layout, {responsive: true});
+                }
+            } catch (error) {
+                console.error('Error loading chart:', error);
+            }
+        }
+
+        // Save configuration
+        async function saveConfiguration() {
+            const config = {
+                api_key: document.getElementById('api-key').value,
+                api_secret: document.getElementById('api-secret').value,
+                passphrase: document.getElementById('passphrase').value,
+                risk_percentage: parseFloat(document.getElementById('risk-percentage').value),
+                max_positions: parseInt(document.getElementById('max-positions').value),
+                demo_mode: document.getElementById('demo-mode').checked
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('Configuration saved successfully!', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+                } else {
+                    showAlert(result.message || 'Failed to save configuration', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error saving configuration: ' + error.message, 'danger');
+            }
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Start auto-update
+        function startAutoUpdate() {
+            updateInterval = setInterval(updateDashboard, 30000); // Update every 30 seconds
+        }
+
+        // Stop auto-update
+        function stopAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        }
+    </script>
+</body>
+</html>

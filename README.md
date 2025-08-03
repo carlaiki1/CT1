@@ -1,4 +1,3 @@
-@ -0,0 +1,416 @@
 # 🤖 Cryptocurrency Trading Agent
 
 An AI-powered cryptocurrency trading agent with multiple strategies, comprehensive backtesting, and a modern web interface. Trade automatically using proven technical analysis strategies on the top cryptocurrencies.

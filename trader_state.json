@@ -1,0 +1,191 @@
+{
+  "positions": {},
+  "trade_history": [],
+  "last_analysis": {
+    "BTC/USD": {
+      "price": 65581.81357998902,
+      "signals": {
+        "symbol": "BTC/USD",
+        "current_price": 63319.15733358437,
+        "signals": [
+          {
+            "strategy": "SMA_Crossover",
+            "signal": "HOLD",
+            "confidence": 0.8795880221062807,
+            "reason": "No crossover: SMA_short=58637.99, SMA_long=64293.13",
+            "timestamp": "2025-08-01T10:58:37.608806"
+          },
+          {
+            "strategy": "RSI",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "RSI neutral: 42.34",
+            "timestamp": "2025-08-01T10:58:37.610192"
+          },
+          {
+            "strategy": "MACD",
+            "signal": "HOLD",
+            "confidence": 0.02678918500072775,
+            "reason": "No MACD crossover: MACD=-1998.5071, Signal=-2052.0455",
+            "timestamp": "2025-08-01T10:58:37.611470"
+          },
+          {
+            "strategy": "Bollinger_Bands",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "Price within BB: position=0.11",
+            "timestamp": "2025-08-01T10:58:37.612711"
+          }
+        ],
+        "consensus": {
+          "signal": "HOLD",
+          "confidence": 0.0,
+          "buy_count": 0,
+          "sell_count": 0,
+          "hold_count": 4
+        },
+        "timestamp": "2025-08-01T10:58:37.612751"
+      },
+      "timestamp": "2025-08-01T10:58:37.612760"
+    },
+    "ETH/USD": {
+      "price": 3209.6066265537675,
+      "signals": {
+        "symbol": "ETH/USD",
+        "current_price": 3117.2311599141553,
+        "signals": [
+          {
+            "strategy": "SMA_Crossover",
+            "signal": "HOLD",
+            "confidence": 0.26620709918038543,
+            "reason": "No crossover: SMA_short=2210.94, SMA_long=2153.61",
+            "timestamp": "2025-08-01T10:58:37.615906"
+          },
+          {
+            "strategy": "RSI",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "RSI neutral: 35.84",
+            "timestamp": "2025-08-01T10:58:37.616978"
+          },
+          {
+            "strategy": "MACD",
+            "signal": "HOLD",
+            "confidence": 1.0,
+            "reason": "No MACD crossover: MACD=-3.6827, Signal=7.9900",
+            "timestamp": "2025-08-01T10:58:37.618342"
+          },
+          {
+            "strategy": "Bollinger_Bands",
+            "signal": "BUY",
+            "confidence": 1.0,
+            "reason": "Price near lower BB: 2064.79 <= 2074.29",
+            "timestamp": "2025-08-01T10:58:37.619651"
+          }
+        ],
+        "consensus": {
+          "signal": "HOLD",
+          "confidence": 0.0,
+          "buy_count": 1,
+          "sell_count": 0,
+          "hold_count": 3
+        },
+        "timestamp": "2025-08-01T10:58:37.619689"
+      },
+      "timestamp": "2025-08-01T10:58:37.619697"
+    },
+    "SOL/USD": {
+      "price": 142.99421268744032,
+      "signals": {
+        "symbol": "SOL/USD",
+        "current_price": 139.6133578171467,
+        "signals": [
+          {
+            "strategy": "SMA_Crossover",
+            "signal": "HOLD",
+            "confidence": 0.6861672714593539,
+            "reason": "No crossover: SMA_short=132.83, SMA_long=124.30",
+            "timestamp": "2025-08-01T10:58:37.622919"
+          },
+          {
+            "strategy": "RSI",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "RSI neutral: 40.16",
+            "timestamp": "2025-08-01T10:58:37.624134"
+          },
+          {
+            "strategy": "MACD",
+            "signal": "HOLD",
+            "confidence": 1.0,
+            "reason": "No MACD crossover: MACD=1.2275, Signal=3.1094",
+            "timestamp": "2025-08-01T10:58:37.625444"
+          },
+          {
+            "strategy": "Bollinger_Bands",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "Price within BB: position=0.30",
+            "timestamp": "2025-08-01T10:58:37.626772"
+          }
+        ],
+        "consensus": {
+          "signal": "HOLD",
+          "confidence": 0.0,
+          "buy_count": 0,
+          "sell_count": 0,
+          "hold_count": 4
+        },
+        "timestamp": "2025-08-01T10:58:37.626808"
+      },
+      "timestamp": "2025-08-01T10:58:37.626817"
+    },
+    "ADA/USD": {
+      "price": 0.4467008588722009,
+      "signals": {
+        "symbol": "ADA/USD",
+        "current_price": 0.4442147069233279,
+        "signals": [
+          {
+            "strategy": "SMA_Crossover",
+            "signal": "HOLD",
+            "confidence": 0.26505283437055893,
+            "reason": "No crossover: SMA_short=67.89, SMA_long=69.74",
+            "timestamp": "2025-08-01T10:58:37.630049"
+          },
+          {
+            "strategy": "RSI",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "RSI neutral: 66.96",
+            "timestamp": "2025-08-01T10:58:37.631105"
+          },
+          {
+            "strategy": "MACD",
+            "signal": "HOLD",
+            "confidence": 1.0,
+            "reason": "No MACD crossover: MACD=0.9014, Signal=-0.2722",
+            "timestamp": "2025-08-01T10:58:37.632310"
+          },
+          {
+            "strategy": "Bollinger_Bands",
+            "signal": "HOLD",
+            "confidence": 0.0,
+            "reason": "Price within BB: position=0.86",
+            "timestamp": "2025-08-01T10:58:37.633517"
+          }
+        ],
+        "consensus": {
+          "signal": "HOLD",
+          "confidence": 0.0,
+          "buy_count": 0,
+          "sell_count": 0,
+          "hold_count": 4
+        },
+        "timestamp": "2025-08-01T10:58:37.633555"
+      },
+      "timestamp": "2025-08-01T10:58:37.633563"
+    }
+  },
+  "timestamp": "2025-08-01T10:58:37.633787"
+}
