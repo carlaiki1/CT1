@@ -408,6 +408,96 @@ class CoinbaseDataFetcher:
             logger.error(f"❌ Error fetching historical data for {symbol}: {e}")
             return pd.DataFrame()
 
+class BacktestExchangeAdapter(ExchangeAdapter):
+    """
+    Exchange adapter for backtesting.
+    Uses historical data to simulate exchange interactions.
+    """
+    def __init__(self, symbol: str, df: pd.DataFrame, initial_capital: float = 10000.0, commission: float = 0.005):
+        self.symbol = symbol
+        self.df = df
+        self.initial_capital = initial_capital
+        self.commission = commission
+        self.current_step = 0
+
+        # Simulate an account balance
+        self.balance = {
+            'USD': {'free': initial_capital, 'used': 0.0, 'total': initial_capital},
+            'COIN': {'free': 0.0, 'used': 0.0, 'total': 0.0} # Generic coin balance
+        }
+
+        # Override parent init
+        self.exchange = None
+        self.demo_mode = True
+
+    def set_step(self, step: int):
+        """Set the current time step for the backtest"""
+        self.current_step = step
+
+    def get_historical_data(self, symbol: str, timeframe: str = '1d', limit: int = 100) -> pd.DataFrame:
+        """Return a slice of the historical data"""
+        if symbol != self.symbol:
+            return pd.DataFrame()
+
+        start = max(0, self.current_step - limit + 1)
+        end = self.current_step + 1
+        return self.df.iloc[start:end]
+
+    def get_ticker(self, symbol: str) -> Dict:
+        """Return the current price from the historical data"""
+        if symbol != self.symbol:
+            return {}
+
+        current_price = self.df['close'].iloc[self.current_step]
+        return {
+            'symbol': symbol,
+            'price': current_price,
+            'timestamp': self.df.index[self.current_step].timestamp()
+        }
+
+    def get_account_balance(self) -> Dict:
+        """Return the simulated account balance"""
+        return self.balance
+
+    def place_order(self, symbol: str, side: str, amount: float, order_type: str = 'market', price: float = None) -> Dict:
+        """Simulate placing an order and update balance"""
+        if symbol != self.symbol:
+            return {}
+
+        current_price = self.df['close'].iloc[self.current_step]
+
+        # Calculate cost and commission
+        cost = amount * current_price
+        commission_cost = cost * self.commission
+
+        if side == 'buy':
+            if self.balance['USD']['free'] < cost + commission_cost:
+                return {'error': 'Insufficient funds'}
+
+            self.balance['USD']['free'] -= cost + commission_cost
+            self.balance['USD']['used'] += cost + commission_cost
+
+            # Simulate fill
+            self.balance['USD']['used'] -= cost
+            self.balance['COIN']['free'] += amount
+
+        elif side == 'sell':
+            if self.balance['COIN']['free'] < amount:
+                return {'error': 'Insufficient funds'}
+
+            self.balance['COIN']['free'] -= amount
+            self.balance['USD']['free'] += cost - commission_cost
+
+        return {
+            'id': f"sim_{int(time.time())}_{self.current_step}",
+            'symbol': symbol,
+            'side': side,
+            'amount': amount,
+            'price': current_price,
+            'status': 'filled',
+            'timestamp': self.df.index[self.current_step]
+        }
+
 if __name__ == "__main__":
     # Test the exchange adapter
     print("🧪 Testing Exchange Adapter...")

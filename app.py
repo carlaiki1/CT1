@@ -15,10 +15,14 @@ import logging
 from typing import Dict, List
 import plotly.graph_objs as go
 import plotly.utils
+from dotenv import load_dotenv
 
 from exchange_adapter import ExchangeAdapter, CoinbaseDataFetcher
 from trading_agent import TradingAgent
 from backtest import BacktestEngine
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,23 +43,13 @@ trading_agent = None
 exchange_adapter = None
 trading_active = False
 trading_thread = None
+trading_lock = threading.Lock()
 app_config = {
     'demo_mode': True,
     'auto_trading': False,
     'risk_percentage': 2.0,
     'max_positions': 5
 }
-
-def load_config():
-    """Load configuration from .env file"""
-    config = {}
-    if os.path.exists('.env'):
-        with open('.env', 'r') as f:
-            for line in f:
-                if '=' in line and not line.startswith('#'):
-                    key, value = line.strip().split('=', 1)
-                    config[key] = value
-    return config
 
 @app.route('/')
 def index():
@@ -121,6 +115,22 @@ def get_symbols():
         
     except Exception as e:
         logger.error(f"❌ Error fetching symbols: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/all_symbols', methods=['GET'])
+def get_all_symbols():
+    """Get all available trading symbols from Coinbase"""
+    try:
+        fetcher = CoinbaseDataFetcher()
+        products = fetcher.get_products()
+        usd_symbols = [
+            p['id'].replace('-', '/')
+            for p in products
+            if p.get('quote_currency') == 'USD' and p.get('status') == 'online'
+        ]
+        return jsonify(sorted(usd_symbols))
+    except Exception as e:
+        logger.error(f"❌ Error fetching all symbols: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/analyze/<symbol>', methods=['GET'])
@@ -197,14 +207,13 @@ def get_performance():
 def start_trading():
     """Start automated trading"""
     global trading_active, trading_thread
-    
-    try:
-        if not trading_agent:
-            return jsonify({'error': 'Trading agent not initialized'}), 400
-        
+    with trading_lock:
         if trading_active:
             return jsonify({'error': 'Trading already active'}), 400
         
+        if not trading_agent:
+            return jsonify({'error': 'Trading agent not initialized'}), 400
+
         trading_active = True
         trading_thread = threading.Thread(target=trading_loop)
         trading_thread.daemon = True
@@ -212,33 +221,25 @@ def start_trading():
         
         logger.info("🚀 Automated trading started")
         return jsonify({'status': 'Trading started'})
-        
-    except Exception as e:
-        logger.error(f"❌ Error starting trading: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trading/stop', methods=['POST'])
 def stop_trading():
     """Stop automated trading"""
     global trading_active
-    
-    try:
+    with trading_lock:
         trading_active = False
         logger.info("⏹️ Automated trading stopped")
         return jsonify({'status': 'Trading stopped'})
-        
-    except Exception as e:
-        logger.error(f"❌ Error stopping trading: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/trading/status', methods=['GET'])
 def get_trading_status():
     """Get trading status"""
-    return jsonify({
-        'active': trading_active,
-        'agent_initialized': trading_agent is not None,
-        'exchange_connected': exchange_adapter is not None
-    })
+    with trading_lock:
+        return jsonify({
+            'active': trading_active,
+            'agent_initialized': trading_agent is not None,
+            'exchange_connected': exchange_adapter is not None
+        })
 
 @app.route('/api/backtest', methods=['POST'])
 def run_backtest():
@@ -311,7 +312,11 @@ def trading_loop():
     
     logger.info("🔄 Trading loop started")
     
-    while trading_active:
+    is_active = True
+    while is_active:
+        with trading_lock:
+            is_active = trading_active
+
         try:
             if not trading_agent:
                 time.sleep(60)
@@ -359,18 +364,22 @@ def trading_loop():
     
     logger.info("⏹️ Trading loop stopped")
 
-# Initialize demo mode by default
-def initialize_demo_mode():
-    """Initialize demo mode"""
-    global exchange_adapter, trading_agent
+def initialize_app():
+    """Initialize the application"""
+    global exchange_adapter, trading_agent, app_config
     
+    # Load config from environment variables
+    app_config['demo_mode'] = os.getenv('DEMO_MODE', 'true').lower() == 'true'
+    app_config['risk_percentage'] = float(os.getenv('RISK_PERCENTAGE', 2.0))
+    app_config['max_positions'] = int(os.getenv('MAX_POSITIONS', 5))
+
     try:
         exchange_adapter = ExchangeAdapter(
             exchange_name='coinbase',
-            api_key='demo_key',
-            api_secret='demo_secret',
-            passphrase='demo_passphrase',
-            demo_mode=True
+            api_key=os.getenv('COINBASE_API_KEY'),
+            api_secret=os.getenv('COINBASE_API_SECRET'),
+            passphrase=os.getenv('COINBASE_PASSPHRASE'),
+            demo_mode=app_config['demo_mode']
         )
         
         trading_agent = TradingAgent(
@@ -378,17 +387,17 @@ def initialize_demo_mode():
             config=app_config
         )
         
-        logger.info("✅ Demo mode initialized")
+        logger.info("✅ Application initialized")
         
     except Exception as e:
-        logger.error(f"❌ Error initializing demo mode: {e}")
+        logger.error(f"❌ Error initializing application: {e}")
 
 if __name__ == '__main__':
-    # Create templates directory and basic template
+    # Create templates directory if it doesn't exist
     os.makedirs('templates', exist_ok=True)
     
-    # Initialize demo mode
-    initialize_demo_mode()
+    # Initialize the application
+    initialize_app()
     
     # Start the Flask app
     port = int(os.environ.get('FLASK_PORT', 12000))

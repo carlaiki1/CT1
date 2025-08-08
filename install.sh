@@ -31,9 +31,13 @@ source venv/bin/activate
 echo "⬆️  Upgrading pip..."
 pip install --upgrade pip
 
+# IMPORTANT: TA-Lib is a prerequisite. Please install it before running this script.
+#   - On Debian/Ubuntu: sudo apt-get install -y ta-lib-dev
+#   - On macOS: brew install ta-lib
+
 # Install required packages
 echo "📚 Installing required packages..."
-pip install flask flask-cors requests pandas numpy ta-lib yfinance ccxt plotly dash dash-bootstrap-components python-dotenv schedule threading2 websocket-client
+pip install flask flask-cors requests pandas numpy ta-lib yfinance ccxt plotly dash dash-bootstrap-components python-dotenv schedule websocket-client
 
 # Install additional packages for backtesting
 echo "📊 Installing backtesting packages..."

@@ -1,0 +1,11 @@
+# Virtual Environment
+venv/
+__pycache__/
+*.pyc
+
+# Backtest results
+backtest_results/
+
+# User-specific
+.env
+trader_state.json

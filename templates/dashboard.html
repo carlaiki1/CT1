@@ -67,9 +67,6 @@
                                 <button id="stop-trading" class="btn btn-danger me-2">
                                     <i class="fas fa-stop me-1"></i>Stop Trading
                                 </button>
-                                <button id="run-backtest" class="btn btn-info">
-                                    <i class="fas fa-chart-line me-1"></i>Run Backtest
-                                </button>
                             </div>
                             <div class="col-md-6 text-end">
                                 <div class="form-check form-switch d-inline-block me-3">
@@ -177,6 +174,26 @@
                 </div>
             </div>
         </div>
+
+        <!-- Backtesting -->
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Backtesting</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Select cryptocurrencies to backtest:</p>
+                        <select id="backtest-symbols" multiple class="form-select" size="10"></select>
+                        <br>
+                        <button id="run-backtest-btn" class="btn btn-info">
+                            <i class="fas fa-chart-line me-1"></i>Run Selected Backtest
+                        </button>
+                        <div id="backtest-status" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Configuration Modal -->
@@ -234,7 +251,7 @@
             // Event listeners
             document.getElementById('start-trading').addEventListener('click', startTrading);
             document.getElementById('stop-trading').addEventListener('click', stopTrading);
-            document.getElementById('run-backtest').addEventListener('click', runBacktest);
+            document.getElementById('run-backtest-btn').addEventListener('click', runBacktest);
             document.getElementById('analyze-btn').addEventListener('click', analyzeSymbol);
             document.getElementById('save-config').addEventListener('click', saveConfiguration);
         });
@@ -242,17 +259,21 @@
         // Load available symbols
         async function loadSymbols() {
             try {
-                const response = await fetch('/api/symbols');
+                const response = await fetch('/api/all_symbols');
                 const symbols = await response.json();
                 
-                const select = document.getElementById('symbol-select');
-                select.innerHTML = '<option value="">Select a symbol...</option>';
+                const symbolSelect = document.getElementById('symbol-select');
+                const backtestSelect = document.getElementById('backtest-symbols');
+
+                symbolSelect.innerHTML = '<option value="">Select a symbol...</option>';
+                backtestSelect.innerHTML = '';
                 
                 symbols.forEach(symbol => {
                     const option = document.createElement('option');
                     option.value = symbol;
                     option.textContent = symbol;
-                    select.appendChild(option);
+                    symbolSelect.appendChild(option.cloneNode(true));
+                    backtestSelect.appendChild(option);
                 });
             } catch (error) {
                 console.error('Error loading symbols:', error);
@@ -412,13 +433,19 @@
 
         // Run backtest
         async function runBacktest() {
+            const selectedSymbols = Array.from(document.getElementById('backtest-symbols').selectedOptions).map(option => option.value);
+            if (selectedSymbols.length === 0) {
+                showAlert('Please select at least one symbol to backtest.', 'warning');
+                return;
+            }
+
             try {
                 showAlert('Starting backtest... This may take several minutes.', 'info');
                 
                 const response = await fetch('/api/backtest', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ years: 3 })
+                    body: JSON.stringify({ symbols: selectedSymbols, years: 3 })
                 });
                 
                 const result = await response.json();

@@ -16,8 +16,8 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-from exchange_adapter import CoinbaseDataFetcher
-from trading_agent import SMAStrategy, RSIStrategy, MACDStrategy, BollingerBandsStrategy, SignalType
+from exchange_adapter import CoinbaseDataFetcher, BacktestExchangeAdapter
+from trading_agent import TradingAgent
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,14 +29,6 @@ class BacktestEngine:
         self.initial_capital = initial_capital
         self.commission = commission
         self.data_fetcher = CoinbaseDataFetcher()
-        
-        # Initialize strategies
-        self.strategies = {
-            'SMA': SMAStrategy(short_window=20, long_window=50),
-            'RSI': RSIStrategy(period=14, overbought=70, oversold=30),
-            'MACD': MACDStrategy(fast_period=12, slow_period=26, signal_period=9),
-            'Bollinger': BollingerBandsStrategy(period=20, std_dev=2.0)
-        }
         
         self.results = {}
         
@@ -70,153 +62,73 @@ class BacktestEngine:
         logger.info(f"📈 Successfully fetched data for {len(data)} symbols")
         return data
     
-    def backtest_strategy(self, strategy, df: pd.DataFrame, symbol: str) -> Dict:
-        """Backtest a single strategy on historical data"""
-        try:
-            # Calculate indicators
-            df_with_indicators = strategy.calculate_indicators(df.copy())
+    def backtest_strategy(self, df: pd.DataFrame, symbol: str, agent_config: Dict) -> Dict:
+        """Backtest a single strategy using the TradingAgent"""
+
+        # Initialize backtest exchange and trading agent
+        exchange = BacktestExchangeAdapter(symbol, df, self.initial_capital, self.commission)
+        agent = TradingAgent(exchange, agent_config)
+
+        equity_curve = []
+
+        for i in tqdm(range(len(df)), desc=f"Backtesting {symbol}", leave=False):
+            exchange.set_step(i)
             
-            # Initialize tracking variables
-            capital = self.initial_capital
-            position = 0  # 0 = no position, 1 = long, -1 = short
-            entry_price = 0
-            trades = []
-            equity_curve = []
+            # 1. Update positions and check exit conditions
+            agent.update_positions()
+            agent.check_exit_conditions()
             
-            for i in range(len(df_with_indicators)):
-                current_data = df_with_indicators.iloc[:i+1]
-                
-                if len(current_data) < 50:  # Skip early periods
-                    equity_curve.append(capital)
-                    continue
-                
-                # Generate signal
-                signal = strategy.generate_signal(current_data, symbol)
-                current_price = current_data['close'].iloc[-1]
-                
-                # Execute trades based on signals
-                if signal.signal == SignalType.BUY and position <= 0 and signal.confidence > 0.3:
-                    # Close short position if any
-                    if position == -1:
-                        pnl = (entry_price - current_price) * abs(position) * capital / entry_price
-                        capital += pnl - (capital * self.commission)
-                        trades.append({
-                            'type': 'close_short',
-                            'price': current_price,
-                            'pnl': pnl,
-                            'date': current_data.index[-1],
-                            'confidence': signal.confidence
-                        })
-                    
-                    # Open long position
-                    position = 1
-                    entry_price = current_price
-                    capital -= capital * self.commission  # Commission
-                    trades.append({
-                        'type': 'buy',
-                        'price': current_price,
-                        'date': current_data.index[-1],
-                        'confidence': signal.confidence
-                    })
-                
-                elif signal.signal == SignalType.SELL and position >= 0 and signal.confidence > 0.3:
-                    # Close long position if any
-                    if position == 1:
-                        pnl = (current_price - entry_price) * position * capital / entry_price
-                        capital += pnl - (capital * self.commission)
-                        trades.append({
-                            'type': 'close_long',
-                            'price': current_price,
-                            'pnl': pnl,
-                            'date': current_data.index[-1],
-                            'confidence': signal.confidence
-                        })
-                    
-                    # Open short position
-                    position = -1
-                    entry_price = current_price
-                    capital -= capital * self.commission  # Commission
-                    trades.append({
-                        'type': 'sell',
-                        'price': current_price,
-                        'date': current_data.index[-1],
-                        'confidence': signal.confidence
-                    })
-                
-                # Calculate current equity
-                if position != 0:
-                    unrealized_pnl = (current_price - entry_price) * position * capital / entry_price
-                    current_equity = capital + unrealized_pnl
-                else:
-                    current_equity = capital
-                
-                equity_curve.append(current_equity)
+            # 2. Analyze market and generate signals
+            analysis = agent.analyze_symbol(symbol, limit=100) # limit is used by agent
             
-            # Close final position
-            if position != 0:
-                final_price = df_with_indicators['close'].iloc[-1]
-                if position == 1:
-                    pnl = (final_price - entry_price) * position * capital / entry_price
-                else:
-                    pnl = (entry_price - final_price) * abs(position) * capital / entry_price
-                
-                capital += pnl - (capital * self.commission)
-                trades.append({
-                    'type': 'close_final',
-                    'price': final_price,
-                    'pnl': pnl,
-                    'date': df_with_indicators.index[-1],
-                    'confidence': 0.5
-                })
+            # 3. Execute trades based on consensus
+            if analysis and not analysis.get('error'):
+                consensus = analysis.get('consensus', {})
+                signal = consensus.get('signal', 'HOLD')
+                confidence = consensus.get('confidence', 0)
+
+                if signal != 'HOLD' and signal not in agent.positions:
+                    agent.execute_trade(symbol, signal, confidence)
             
-            # Calculate performance metrics
-            total_return = (capital - self.initial_capital) / self.initial_capital * 100
-            
-            # Calculate additional metrics
-            equity_series = pd.Series(equity_curve, index=df_with_indicators.index)
-            returns = equity_series.pct_change().dropna()
-            
-            # Sharpe ratio (assuming 0% risk-free rate)
-            sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
-            
-            # Maximum drawdown
-            rolling_max = equity_series.expanding().max()
-            drawdown = (equity_series - rolling_max) / rolling_max
-            max_drawdown = drawdown.min() * 100
-            
-            # Win rate
-            profitable_trades = [t for t in trades if 'pnl' in t and t['pnl'] > 0]
-            total_closed_trades = [t for t in trades if 'pnl' in t]
-            win_rate = len(profitable_trades) / len(total_closed_trades) * 100 if total_closed_trades else 0
-            
-            # Average trade
-            avg_trade = np.mean([t['pnl'] for t in total_closed_trades]) if total_closed_trades else 0
-            
-            return {
-                'symbol': symbol,
-                'strategy': strategy.name,
-                'total_return': total_return,
-                'final_capital': capital,
-                'total_trades': len(trades),
-                'closed_trades': len(total_closed_trades),
-                'win_rate': win_rate,
-                'avg_trade': avg_trade,
-                'sharpe_ratio': sharpe_ratio,
-                'max_drawdown': max_drawdown,
-                'trades': trades,
-                'equity_curve': equity_curve,
-                'dates': df_with_indicators.index.tolist()
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ Error backtesting {strategy.name} on {symbol}: {e}")
-            return {
-                'symbol': symbol,
-                'strategy': strategy.name,
-                'error': str(e),
-                'total_return': 0,
-                'final_capital': self.initial_capital
-            }
+            # 4. Record equity
+            total_equity = exchange.balance['USD']['free']
+            for pos in agent.positions.values():
+                total_equity += pos.amount * pos.current_price
+            equity_curve.append(total_equity)
+
+        # Final performance calculation
+        final_capital = equity_curve[-1]
+        total_return = (final_capital - self.initial_capital) / self.initial_capital * 100
+
+        # Calculate additional metrics from trade history
+        equity_series = pd.Series(equity_curve, index=df.index)
+        returns = equity_series.pct_change().dropna()
+
+        sharpe_ratio = returns.mean() / returns.std() * np.sqrt(252) if returns.std() > 0 else 0
+
+        rolling_max = equity_series.expanding().max()
+        drawdown = (equity_series - rolling_max) / rolling_max
+        max_drawdown = drawdown.min() * 100
+
+        closed_trades = [t for t in agent.trade_history if t.get('pnl')]
+        profitable_trades = [t for t in closed_trades if t['pnl'] > 0]
+        win_rate = len(profitable_trades) / len(closed_trades) * 100 if closed_trades else 0
+        avg_trade = np.mean([t['pnl'] for t in closed_trades]) if closed_trades else 0
+
+        return {
+            'symbol': symbol,
+            'strategy': 'Combined',
+            'total_return': total_return,
+            'final_capital': final_capital,
+            'trades': agent.trade_history,
+            'equity_curve': equity_curve,
+            'dates': df.index.tolist(),
+            'win_rate': win_rate,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'avg_trade': avg_trade,
+            'closed_trades': len(closed_trades),
+        }
     
     def run_comprehensive_backtest(self, symbols: List[str] = None, years: int = 3) -> Dict:
         """Run comprehensive backtest on multiple symbols and strategies"""
@@ -235,16 +147,17 @@ class BacktestEngine:
         
         # Run backtests
         results = {}
-        total_combinations = len(historical_data) * len(self.strategies)
+        agent_config = {
+            'max_positions': 5,
+            'risk_percentage': 2.0,
+            'stop_loss_percentage': 5.0,
+            'take_profit_percentage': 10.0,
+            'confidence_threshold': 0.3,
+        }
         
-        with tqdm(total=total_combinations, desc="Running backtests") as pbar:
-            for symbol, df in historical_data.items():
-                results[symbol] = {}
-                
-                for strategy_name, strategy in self.strategies.items():
-                    result = self.backtest_strategy(strategy, df, symbol)
-                    results[symbol][strategy_name] = result
-                    pbar.update(1)
+        for symbol, df in historical_data.items():
+            result = self.backtest_strategy(df, symbol, agent_config)
+            results[symbol] = {'Combined': result} # Store under 'Combined' strategy
         
         self.results = results
         return results

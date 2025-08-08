@@ -1,191 +1,105 @@
 {
-  "positions": {},
-  "trade_history": [],
-  "last_analysis": {
-    "BTC/USD": {
-      "price": 65581.81357998902,
-      "signals": {
-        "symbol": "BTC/USD",
-        "current_price": 63319.15733358437,
-        "signals": [
-          {
-            "strategy": "SMA_Crossover",
-            "signal": "HOLD",
-            "confidence": 0.8795880221062807,
-            "reason": "No crossover: SMA_short=58637.99, SMA_long=64293.13",
-            "timestamp": "2025-08-01T10:58:37.608806"
-          },
-          {
-            "strategy": "RSI",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "RSI neutral: 42.34",
-            "timestamp": "2025-08-01T10:58:37.610192"
-          },
-          {
-            "strategy": "MACD",
-            "signal": "HOLD",
-            "confidence": 0.02678918500072775,
-            "reason": "No MACD crossover: MACD=-1998.5071, Signal=-2052.0455",
-            "timestamp": "2025-08-01T10:58:37.611470"
-          },
-          {
-            "strategy": "Bollinger_Bands",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "Price within BB: position=0.11",
-            "timestamp": "2025-08-01T10:58:37.612711"
-          }
-        ],
-        "consensus": {
-          "signal": "HOLD",
-          "confidence": 0.0,
-          "buy_count": 0,
-          "sell_count": 0,
-          "hold_count": 4
-        },
-        "timestamp": "2025-08-01T10:58:37.612751"
-      },
-      "timestamp": "2025-08-01T10:58:37.612760"
-    },
-    "ETH/USD": {
-      "price": 3209.6066265537675,
-      "signals": {
-        "symbol": "ETH/USD",
-        "current_price": 3117.2311599141553,
-        "signals": [
-          {
-            "strategy": "SMA_Crossover",
-            "signal": "HOLD",
-            "confidence": 0.26620709918038543,
-            "reason": "No crossover: SMA_short=2210.94, SMA_long=2153.61",
-            "timestamp": "2025-08-01T10:58:37.615906"
-          },
-          {
-            "strategy": "RSI",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "RSI neutral: 35.84",
-            "timestamp": "2025-08-01T10:58:37.616978"
-          },
-          {
-            "strategy": "MACD",
-            "signal": "HOLD",
-            "confidence": 1.0,
-            "reason": "No MACD crossover: MACD=-3.6827, Signal=7.9900",
-            "timestamp": "2025-08-01T10:58:37.618342"
-          },
-          {
-            "strategy": "Bollinger_Bands",
-            "signal": "BUY",
-            "confidence": 1.0,
-            "reason": "Price near lower BB: 2064.79 <= 2074.29",
-            "timestamp": "2025-08-01T10:58:37.619651"
-          }
-        ],
-        "consensus": {
-          "signal": "HOLD",
-          "confidence": 0.0,
-          "buy_count": 1,
-          "sell_count": 0,
-          "hold_count": 3
-        },
-        "timestamp": "2025-08-01T10:58:37.619689"
-      },
-      "timestamp": "2025-08-01T10:58:37.619697"
-    },
-    "SOL/USD": {
-      "price": 142.99421268744032,
-      "signals": {
-        "symbol": "SOL/USD",
-        "current_price": 139.6133578171467,
-        "signals": [
-          {
-            "strategy": "SMA_Crossover",
-            "signal": "HOLD",
-            "confidence": 0.6861672714593539,
-            "reason": "No crossover: SMA_short=132.83, SMA_long=124.30",
-            "timestamp": "2025-08-01T10:58:37.622919"
-          },
-          {
-            "strategy": "RSI",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "RSI neutral: 40.16",
-            "timestamp": "2025-08-01T10:58:37.624134"
-          },
-          {
-            "strategy": "MACD",
-            "signal": "HOLD",
-            "confidence": 1.0,
-            "reason": "No MACD crossover: MACD=1.2275, Signal=3.1094",
-            "timestamp": "2025-08-01T10:58:37.625444"
-          },
-          {
-            "strategy": "Bollinger_Bands",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "Price within BB: position=0.30",
-            "timestamp": "2025-08-01T10:58:37.626772"
-          }
-        ],
-        "consensus": {
-          "signal": "HOLD",
-          "confidence": 0.0,
-          "buy_count": 0,
-          "sell_count": 0,
-          "hold_count": 4
-        },
-        "timestamp": "2025-08-01T10:58:37.626808"
-      },
-      "timestamp": "2025-08-01T10:58:37.626817"
-    },
-    "ADA/USD": {
-      "price": 0.4467008588722009,
-      "signals": {
-        "symbol": "ADA/USD",
-        "current_price": 0.4442147069233279,
-        "signals": [
-          {
-            "strategy": "SMA_Crossover",
-            "signal": "HOLD",
-            "confidence": 0.26505283437055893,
-            "reason": "No crossover: SMA_short=67.89, SMA_long=69.74",
-            "timestamp": "2025-08-01T10:58:37.630049"
-          },
-          {
-            "strategy": "RSI",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "RSI neutral: 66.96",
-            "timestamp": "2025-08-01T10:58:37.631105"
-          },
-          {
-            "strategy": "MACD",
-            "signal": "HOLD",
-            "confidence": 1.0,
-            "reason": "No MACD crossover: MACD=0.9014, Signal=-0.2722",
-            "timestamp": "2025-08-01T10:58:37.632310"
-          },
-          {
-            "strategy": "Bollinger_Bands",
-            "signal": "HOLD",
-            "confidence": 0.0,
-            "reason": "Price within BB: position=0.86",
-            "timestamp": "2025-08-01T10:58:37.633517"
-          }
-        ],
-        "consensus": {
-          "signal": "HOLD",
-          "confidence": 0.0,
-          "buy_count": 0,
-          "sell_count": 0,
-          "hold_count": 4
-        },
-        "timestamp": "2025-08-01T10:58:37.633555"
-      },
-      "timestamp": "2025-08-01T10:58:37.633563"
+  "positions": {
+    "TEST/USD": {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.9238205282888776,
+      "entry_price": 0,
+      "current_price": 0,
+      "pnl": 0.0,
+      "pnl_percentage": 0.0,
+      "timestamp": "2025-08-08 12:25:48.367394"
     }
   },
-  "timestamp": "2025-08-01T10:58:37.633787"
+  "trade_history": [
+    {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.9238205282888776,
+      "price": 0,
+      "confidence": 0.3017878685926443,
+      "timestamp": "2025-08-08T12:25:04.546913",
+      "order_id": null
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "buy",
+      "amount": 1.9238205282888776,
+      "price": 103.64953461733613,
+      "reason": "stop_loss",
+      "pnl": -199.40310244441991,
+      "pnl_percentage": -Infinity,
+      "timestamp": "2025-08-08T12:25:04.547935",
+      "order_id": "sim_1754655904_317"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.7760171174992672,
+      "price": 110.35479090248579,
+      "confidence": 0.31561813889523843,
+      "timestamp": "2025-08-08T12:25:05.267085",
+      "order_id": "sim_1754655905_378"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "buy",
+      "amount": 1.7760171174992672,
+      "price": 97.88260884793137,
+      "reason": "take_profit",
+      "pnl": 22.150808821455836,
+      "pnl_percentage": 11.301894510022112,
+      "timestamp": "2025-08-08T12:25:06.787730",
+      "order_id": "sim_1754655906_525"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.6999920346537916,
+      "price": 115.52879454440932,
+      "confidence": 0.3229923166702233,
+      "timestamp": "2025-08-08T12:25:09.826577",
+      "order_id": "sim_1754655909_894"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "buy",
+      "amount": 1.6999920346537916,
+      "price": 122.00008551757927,
+      "reason": "stop_loss",
+      "pnl": -11.001143108315885,
+      "pnl_percentage": -5.601452866092509,
+      "timestamp": "2025-08-08T12:25:09.973759",
+      "order_id": "sim_1754655909_913"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.6076843477934406,
+      "price": 122.00008551757927,
+      "confidence": 0.3412443461956505,
+      "timestamp": "2025-08-08T12:25:09.982626",
+      "order_id": "sim_1754655909_913"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "buy",
+      "amount": 1.6076843477934406,
+      "price": 128.84216028657033,
+      "reason": "stop_loss",
+      "pnl": -10.999896512539362,
+      "pnl_percentage": -5.608254076186839,
+      "timestamp": "2025-08-08T12:25:10.792810",
+      "order_id": "sim_1754655910_1014"
+    },
+    {
+      "symbol": "TEST/USD",
+      "side": "sell",
+      "amount": 1.9238205282888776,
+      "price": 0,
+      "confidence": 0.3017878685926443,
+      "timestamp": "2025-08-08T12:25:48.367405",
+      "order_id": null
+    }
+  ]
 }
