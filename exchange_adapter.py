@@ -14,18 +14,49 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _read_keys_from_file(filename="API.txt"):
+    """Reads API key and secret from a text file."""
+    try:
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+            keys = {}
+            for line in lines:
+                if "API Key:" in line:
+                    keys['api_key'] = line.split("API Key:")[1].strip()
+                elif "API Secret:" in line:
+                    keys['api_secret'] = line.split("API Secret:")[1].strip()
+
+            if 'api_key' in keys and 'api_secret' in keys:
+                logger.info(f"✅ Loaded API credentials from {filename}")
+                return keys['api_key'], keys['api_secret']
+    except FileNotFoundError:
+        # This case is handled by os.path.exists, but included for safety
+        pass
+    except Exception as e:
+        logger.error(f"❌ Error reading {filename}: {e}")
+    return None, None
+
 class ExchangeAdapter:
-    def __init__(self, exchange_name: str, api_key: str, api_secret: str, passphrase: str = None, demo_mode: bool = True):
+    def __init__(self, exchange_name: str, api_key: str = None, api_secret: str = None, passphrase: str = None, demo_mode: bool = True):
+        # Try to load from file first, then from environment variables, then from direct parameters
+        file_api_key, file_api_secret = _read_keys_from_file()
+
         self.exchange_name = exchange_name.lower()
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.passphrase = passphrase
-        self.demo_mode = demo_mode
+        self.api_key = file_api_key or os.getenv('COINBASE_API_KEY') or api_key
+        self.api_secret = file_api_secret or os.getenv('COINBASE_API_SECRET') or api_secret
+        self.passphrase = os.getenv('COINBASE_PASSPHRASE') or passphrase
+
+        # If keys are found, we are not in demo mode. Otherwise, we are.
+        self.demo_mode = not (self.api_key and self.api_secret)
         self.exchange = None
+
+        logger.info(f"Starting in {'Demo Mode' if self.demo_mode else 'Live Mode'}")
         
         self._initialize_exchange()
     
