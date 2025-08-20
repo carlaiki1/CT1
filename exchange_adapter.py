@@ -63,35 +63,24 @@ class ExchangeAdapter:
     def _initialize_exchange(self):
         """Initialize the exchange connection"""
         try:
-            if self.exchange_name == 'coinbase':
-                # Try different Coinbase exchange names in CCXT
-                exchange_classes = ['coinbaseadvanced', 'coinbase', 'coinbaseexchange']
-                
-                for exchange_name in exchange_classes:
-                    try:
-                        if hasattr(ccxt, exchange_name):
-                            exchange_class = getattr(ccxt, exchange_name)
+            if self.demo_mode:
+                logger.info("⚠️ Using simulated exchange for demo mode")
+                self.exchange = None
+                return
 
-                            self.exchange = exchange_class({
-                                'apiKey': self.api_key,
-                                'secret': self.api_secret,
-                                'password': self.passphrase,
-                                'sandbox': self.demo_mode,
-                                'enableRateLimit': True,
-                            })
-                            logger.info(f"✅ Using {exchange_name} exchange class")
-                            break
-                    except Exception as e:
-                        logger.debug(f"Failed to initialize {exchange_name}: {e}")
-                        continue
-                else:
-                    # If all fail, fallback to demo mode
-                    if self.demo_mode:
-                        logger.info("⚠️ Using simulated exchange for demo mode")
-                        self.exchange = None
-                    else:
-                        raise ValueError("Could not initialize any Coinbase exchange class")
-                            
+            if self.exchange_name == 'coinbase':
+                logger.info("Attempting to connect to Coinbase Advanced Trade API...")
+                exchange_class = getattr(ccxt, 'coinbaseadvanced')
+
+                config = {
+                    'apiKey': self.api_key,
+                    'secret': self.api_secret,
+                    'enableRateLimit': True,
+                }
+
+                self.exchange = exchange_class(config)
+                logger.info("✅ Successfully connected to Coinbase Advanced Trade API.")
+
             elif self.exchange_name == 'kraken':
                 self.exchange = ccxt.kraken({
                     'apiKey': self.api_key,
