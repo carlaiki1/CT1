@@ -39,11 +39,6 @@ def test_api_connection():
         print("💡 Run: python setup_api.py to configure your API keys")
         return False
     
-    if not passphrase or passphrase == 'your_coinbase_passphrase_here':
-        print("❌ COINBASE_PASSPHRASE not set in .env file")
-        print("💡 Run: python setup_api.py to configure your API keys")
-        return False
-    
     print(f"🔑 API Key: {api_key[:8]}...{api_key[-4:]}")
     print(f"🎮 Demo Mode: {demo_mode}")
     print()
