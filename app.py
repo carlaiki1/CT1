@@ -116,8 +116,17 @@ def get_symbols():
     """Get available trading symbols"""
     try:
         fetcher = CoinbaseDataFetcher()
-        symbols = fetcher.get_top_volume_products(25)
-        return jsonify(symbols)
+        # Fetch all products efficiently using a single API call
+        all_products = fetcher.get_products()
+        # Filter for online USD pairs and format them correctly
+        usd_symbols = [
+            p['id'].replace('-', '/')
+            for p in all_products
+            if p.get('quote_currency') == 'USD' and p.get('status') == 'online'
+        ]
+        # Sort alphabetically for user convenience
+        usd_symbols.sort()
+        return jsonify(usd_symbols)
         
     except Exception as e:
         logger.error(f"❌ Error fetching symbols: {e}")
