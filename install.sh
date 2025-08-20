@@ -7,7 +7,7 @@ echo "🚀 Installing Cryptocurrency Trading Agent..."
 echo "=============================================="
 
 # Check if Python 3.8+ is installed
-python_version=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+python_version=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 required_version="3.8"
 
 if [ "$(printf '%s\n' "$required_version" "$python_version" | sort -V | head -n1)" = "$required_version" ]; then
@@ -20,7 +20,7 @@ fi
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
     echo "📦 Creating virtual environment..."
-    python3 -m venv venv
+    python -m venv venv
 fi
 
 # Activate virtual environment
@@ -33,7 +33,7 @@ pip install --upgrade pip
 
 # Install required packages
 echo "📚 Installing required packages..."
-pip install flask flask-cors requests pandas numpy ta-lib yfinance ccxt plotly dash dash-bootstrap-components python-dotenv schedule threading2 websocket-client
+pip install flask flask-cors requests pandas numpy ta-lib yfinance ccxt plotly dash dash-bootstrap-components python-dotenv schedule websocket-client
 
 # Install additional packages for backtesting
 echo "📊 Installing backtesting packages..."

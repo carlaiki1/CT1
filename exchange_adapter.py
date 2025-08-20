@@ -125,21 +125,22 @@ class ExchangeAdapter:
         import numpy as np
         import time
         
-        # Base price depends on symbol
+        # Use a hash for consistent-ish random prices for any symbol
+        np.random.seed(hash(symbol) & 0xFFFFFFFF)
+
+        # Determine a plausible base price range based on common crypto values
         if 'BTC' in symbol:
-            base_price = 65000 + np.random.normal(0, 2000)
+            base_price = 65000
         elif 'ETH' in symbol:
-            base_price = 3200 + np.random.normal(0, 200)
-        elif 'SOL' in symbol:
-            base_price = 150 + np.random.normal(0, 10)
-        elif 'ADA' in symbol:
-            base_price = 0.5 + np.random.normal(0, 0.05)
-        else:
-            base_price = 100 + np.random.normal(0, 10)
-        
-        price = max(0.01, base_price)  # Ensure positive price
-        spread = price * 0.001  # 0.1% spread
-        change = np.random.normal(0, price * 0.02)  # 2% volatility
+            base_price = 3200
+        elif 'USD' in symbol and len(symbol.split('/')[0]) > 3: # Likely an altcoin
+            base_price = np.random.uniform(0.00001, 10.0)
+        else: # Other major pairs
+            base_price = np.random.uniform(10, 500)
+
+        price = max(0.000001, base_price * (1 + np.random.normal(0, 0.05)))
+        spread = price * 0.001
+        change = np.random.normal(0, price * 0.02)
         
         return {
             'symbol': symbol,
@@ -148,7 +149,7 @@ class ExchangeAdapter:
             'ask': price + spread/2,
             'volume': np.random.randint(1000000, 10000000),
             'change': change,
-            'percentage': (change / price) * 100,
+            'percentage': (change / price) * 100 if price > 0 else 0,
             'timestamp': int(time.time() * 1000)
         }
 
@@ -181,7 +182,7 @@ class ExchangeAdapter:
         dates = pd.date_range(start=start_date, end=end_date, freq='D')[:limit]
         
         # Generate realistic price movements
-        np.random.seed(hash(symbol) % 2**32)  # Consistent data for same symbol
+        np.random.seed(hash(symbol) & 0xFFFFFFFF)
         
         # Base price depends on symbol
         if 'BTC' in symbol:
@@ -190,8 +191,11 @@ class ExchangeAdapter:
         elif 'ETH' in symbol:
             base_price = 3200
             volatility = 0.04
+        elif 'USD' in symbol and len(symbol.split('/')[0]) > 3:
+            base_price = np.random.uniform(0.00001, 10.0)
+            volatility = 0.08
         else:
-            base_price = 100
+            base_price = np.random.uniform(10, 500)
             volatility = 0.05
         
         # Generate price series

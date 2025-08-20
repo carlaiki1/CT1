@@ -86,6 +86,16 @@
             </div>
         </div>
 
+        <!-- Debug Info -->
+        <div class="card mt-3 mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-bug me-2"></i>Debug Info</h5>
+            </div>
+            <div class="card-body" id="debug-info">
+                <p class="text-muted">Waiting for data...</p>
+            </div>
+        </div>
+
         <!-- Metrics Row -->
         <div class="row mb-4">
             <div class="col-md-3">
@@ -241,9 +251,18 @@
 
         // Load available symbols
         async function loadSymbols() {
+            const debugDiv = document.getElementById('debug-info');
             try {
+                debugDiv.innerHTML = 'Fetching symbols from /api/symbols...';
                 const response = await fetch('/api/symbols');
+
+                if (!response.ok) {
+                    debugDiv.innerHTML = `Error: API request failed with status ${response.status} (${response.statusText})`;
+                    return;
+                }
+
                 const symbols = await response.json();
+                debugDiv.innerHTML = `Successfully fetched ${symbols.length} symbols. Populating dropdown...`;
                 
                 const select = document.getElementById('symbol-select');
                 select.innerHTML = '<option value="">Select a symbol...</option>';
@@ -254,8 +273,12 @@
                     option.textContent = symbol;
                     select.appendChild(option);
                 });
+
+                debugDiv.innerHTML += '<br>Dropdown populated successfully.';
+
             } catch (error) {
                 console.error('Error loading symbols:', error);
+                debugDiv.innerHTML = `An error occurred in the JavaScript: ${error.toString()}`;
             }
         }
 
