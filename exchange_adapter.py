@@ -40,13 +40,17 @@ class ExchangeAdapter:
                     try:
                         if hasattr(ccxt, exchange_name):
                             exchange_class = getattr(ccxt, exchange_name)
-                            self.exchange = exchange_class({
+
+                            config = {
                                 'apiKey': self.api_key,
                                 'secret': self.api_secret,
-                                'password': self.passphrase,
                                 'sandbox': self.demo_mode,
                                 'enableRateLimit': True,
-                            })
+                            }
+                            if self.passphrase:
+                                config['password'] = self.passphrase
+
+                            self.exchange = exchange_class(config)
                             logger.info(f"✅ Using {exchange_name} exchange class")
                             break
                     except Exception as e:

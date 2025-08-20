@@ -38,10 +38,7 @@ def setup_coinbase_api():
         print("❌ API Secret is required!")
         return None
     
-    passphrase = getpass.getpass("Enter your Passphrase (hidden): ").strip()
-    if not passphrase:
-        print("❌ Passphrase is required!")
-        return None
+    passphrase = getpass.getpass("Enter your Passphrase (optional, press Enter to skip): ").strip()
     
     return {
         'api_key': api_key,
