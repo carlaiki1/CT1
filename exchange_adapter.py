@@ -20,24 +20,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def _read_keys_from_file(filename="API.txt"):
-    """Reads API key and secret from a text file."""
+    """Reads API key and secret from the JSON file downloaded from Coinbase."""
     try:
         if os.path.exists(filename):
             with open(filename, 'r') as f:
-                lines = f.readlines()
-            keys = {}
-            for line in lines:
-                if "API Key:" in line:
-                    keys['api_key'] = line.split("API Key:")[1].strip()
-                elif "API Secret:" in line:
-                    keys['api_secret'] = line.split("API Secret:")[1].strip()
+                data = json.load(f)
 
-            if 'api_key' in keys and 'api_secret' in keys:
+            api_key = data.get("name")
+            api_secret = data.get("privateKey")
+
+            if api_key and api_secret:
                 logger.info(f"✅ Loaded API credentials from {filename}")
-                return keys['api_key'], keys['api_secret']
+                # The 'name' from the file is the apiKey for ccxt
+                # The 'privateKey' from the file is the secret for ccxt
+                return api_key, api_secret
+            else:
+                logger.error(f"❌ {filename} is missing 'name' or 'privateKey' fields.")
     except FileNotFoundError:
-        # This case is handled by os.path.exists, but included for safety
-        pass
+        pass # Silently fail if file not found, fallback to other methods
+    except json.JSONDecodeError:
+        logger.error(f"❌ Could not decode JSON from {filename}. Please ensure it is a valid JSON file.")
     except Exception as e:
         logger.error(f"❌ Error reading {filename}: {e}")
     return None, None
