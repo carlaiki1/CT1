@@ -188,11 +188,18 @@ class ExchangeAdapter:
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             df.set_index('timestamp', inplace=True)
             return df
+        except ccxt.base.errors.NetworkError as e:
+            logger.error(f"❌ Network error fetching historical data for {symbol}: {e}")
+        except ccxt.base.errors.ExchangeError as e:
+            logger.error(f"❌ Exchange error fetching historical data for {symbol}: {e}")
+        except ccxt.base.errors.BaseError as e:
+            logger.error(f"❌ CCXT error fetching historical data for {symbol}: {e}")
         except Exception as e:
-            logger.error(f"❌ Error fetching historical data for {symbol}: {e}")
-            if self.demo_mode:
-                return self._generate_sample_data(symbol, limit)
-            return pd.DataFrame()
+            logger.error(f"❌ Unexpected error fetching historical data for {symbol}: {e}")
+
+        if self.demo_mode:
+            return self._generate_sample_data(symbol, limit)
+        return pd.DataFrame()
     
     def _generate_sample_data(self, symbol: str, limit: int = 1000) -> pd.DataFrame:
         """Generate sample data for demo mode"""
@@ -348,14 +355,16 @@ class CoinbaseDataFetcher:
     """Specialized class for fetching Coinbase historical data for backtesting"""
     
     def __init__(self):
-        self.base_url = "https://api.exchange.coinbase.com"
+        self.base_url = "https://api.coinbase.com"
     
     def get_products(self) -> List[Dict]:
         """Get all available trading products"""
         try:
-            response = requests.get(f"{self.base_url}/products")
+            # Note: The Advanced Trade API endpoint for products is /api/v3/brokerage/products
+            response = requests.get(f"{self.base_url}/api/v3/brokerage/products")
             response.raise_for_status()
-            return response.json()
+            # The actual products are in a 'products' key
+            return response.json().get('products', [])
         except Exception as e:
             logger.error(f"❌ Error fetching products: {e}")
             return []
@@ -367,23 +376,23 @@ class CoinbaseDataFetcher:
             usd_products = []
             
             for product in products:
-                if product['quote_currency'] == 'USD' and product['status'] == 'online':
-                    # Get 24h stats
+                # Check for quote currency and status
+                if product.get('quote_currency_id') == 'USD' and product.get('status') == 'online':
                     try:
-                        stats_response = requests.get(f"{self.base_url}/products/{product['id']}/stats")
-                        if stats_response.status_code == 200:
-                            stats = stats_response.json()
-                            volume = float(stats.get('volume', 0))
-                            if volume > 0:
-                                usd_products.append({
-                                    'id': product['id'],
-                                    'volume': volume
-                                })
-                    except:
+                        # The volume is now part of the product details, no separate stats call needed
+                        volume = float(product.get('volume_24h', 0))
+                        if volume > 0 and len(product['product_id'].split('-')[0]) > 1:
+                            usd_products.append({
+                                'id': product['product_id'],
+                                'volume': volume
+                            })
+                    except (ValueError, TypeError):
+                        # Ignore if volume is not a valid number
                         continue
             
             # Sort by volume and return top symbols
             usd_products.sort(key=lambda x: x['volume'], reverse=True)
+            # The product_id is already in the format 'BTC-USD'
             return [product['id'].replace('-', '/') for product in usd_products[:limit]]
             
         except Exception as e:
@@ -397,29 +406,36 @@ class CoinbaseDataFetcher:
                 'ETC/USD', 'THETA/USD', 'AAVE/USD', 'ATOM/USD', 'XTZ/USD'
             ]
     
-    def get_historical_data(self, symbol: str, start_date: str, end_date: str, granularity: int = 86400) -> pd.DataFrame:
+    def get_historical_data(self, symbol: str, start_date: str, end_date: str, granularity: str = "ONE_DAY") -> pd.DataFrame:
         """
         Get historical candle data
-        granularity: 60, 300, 900, 3600, 21600, 86400 (seconds)
+        granularity: ONE_MINUTE, FIVE_MINUTE, FIFTEEN_MINUTE, THIRTY_MINUTE, ONE_HOUR, TWO_HOUR, SIX_HOUR, ONE_DAY
         """
         try:
             product_id = symbol.replace('/', '-')
-            url = f"{self.base_url}/products/{product_id}/candles"
+            # The Advanced Trade API endpoint for candles is different
+            url = f"{self.base_url}/api/v3/brokerage/market/products/{product_id}/candles"
             
+            # The API expects start and end times as Unix timestamps
+            start_ts = int(datetime.fromisoformat(start_date).timestamp())
+            end_ts = int(datetime.fromisoformat(end_date).timestamp())
+
             params = {
-                'start': start_date,
-                'end': end_date,
+                'start': start_ts,
+                'end': end_ts,
                 'granularity': granularity
             }
             
             response = requests.get(url, params=params)
             response.raise_for_status()
-            data = response.json()
+            # Candles are in a 'candles' key
+            data = response.json().get('candles', [])
             
             if not data:
                 return pd.DataFrame()
             
             # Convert to DataFrame
+            # The new API returns: start, low, high, open, close, volume
             df = pd.DataFrame(data, columns=['timestamp', 'low', 'high', 'open', 'close', 'volume'])
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
             df = df.sort_values('timestamp')
@@ -452,7 +468,8 @@ if __name__ == "__main__":
         df = fetcher.get_historical_data(
             symbol, 
             start_date.isoformat(), 
-            end_date.isoformat()
+            end_date.isoformat(),
+            granularity='ONE_DAY' # Use new granularity format
         )
         
         if not df.empty:

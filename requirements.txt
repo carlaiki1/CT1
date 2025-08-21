@@ -1,0 +1,12 @@
+flask
+flask_cors
+pandas
+plotly
+ccxt
+requests
+numpy
+matplotlib
+seaborn
+tqdm
+python-dotenv
+yfinance
