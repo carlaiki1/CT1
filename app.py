@@ -132,7 +132,7 @@ def get_symbols():
         logger.error(f"❌ Error fetching symbols: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/analyze/<symbol>', methods=['GET'])
+@app.route('/api/analyze/<path:symbol>', methods=['GET'])
 def analyze_symbol(symbol):
     """Analyze a specific symbol"""
     try:
@@ -273,7 +273,7 @@ def run_backtest():
         logger.error(f"❌ Error running backtest: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/chart/<symbol>')
+@app.route('/api/chart/<path:symbol>')
 def get_chart_data(symbol):
     """Get chart data for a symbol"""
     try:
