@@ -249,6 +249,50 @@ def get_trading_status():
         'exchange_connected': exchange_adapter is not None
     })
 
+@app.route('/api/connect', methods=['POST'])
+def connect_to_exchange():
+    """Connect to the live exchange"""
+    global exchange_adapter, trading_agent
+    try:
+        exchange_adapter = ExchangeAdapter(
+            exchange_name='coinbase',
+            demo_mode=False
+        )
+        if exchange_adapter.demo_mode: # This will be true if API keys are not found
+            return jsonify({'status': 'error', 'message': 'API keys not found or invalid.'}), 400
+
+        trading_agent = TradingAgent(
+            exchange_adapter=exchange_adapter,
+            config=app_config
+        )
+        balance = exchange_adapter.get_account_balance()
+        return jsonify({
+            'status': 'success',
+            'message': 'Successfully connected to Coinbase.',
+            'balance': balance,
+            'demo_mode': False
+        })
+    except Exception as e:
+        logger.error(f"❌ Error connecting to exchange: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/democonnect', methods=['POST'])
+def connect_to_demo():
+    """Connect to the demo exchange"""
+    global exchange_adapter, trading_agent
+    try:
+        initialize_demo_mode()
+        balance = exchange_adapter.get_account_balance()
+        return jsonify({
+            'status': 'success',
+            'message': 'Successfully connected to Demo Mode.',
+            'balance': balance,
+            'demo_mode': True
+        })
+    except Exception as e:
+        logger.error(f"❌ Error connecting to demo: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/api/backtest', methods=['POST'])
 def run_backtest():
     """Run backtest"""
@@ -395,9 +439,6 @@ def initialize_demo_mode():
 if __name__ == '__main__':
     # Create templates directory and basic template
     os.makedirs('templates', exist_ok=True)
-    
-    # Initialize demo mode
-    initialize_demo_mode()
     
     # Start the Flask app
     port = int(os.environ.get('FLASK_PORT', 12000))
