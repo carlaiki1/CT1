@@ -16,7 +16,7 @@ from typing import Dict, List
 import plotly.graph_objs as go
 import plotly.utils
 
-from exchange_adapter import ExchangeAdapter, CoinbaseDataFetcher
+from exchange_adapter import ExchangeAdapter
 from trading_agent import TradingAgent
 from backtest import BacktestEngine
 
@@ -115,14 +115,21 @@ def get_balance():
 def get_symbols():
     """Get available trading symbols"""
     try:
-        fetcher = CoinbaseDataFetcher()
-        # Fetch all products efficiently using a single API call
-        all_products = fetcher.get_products()
+        if not exchange_adapter or exchange_adapter.demo_mode:
+             # In demo mode, use a predefined list of popular symbols
+            return jsonify([
+                'BTC/USD', 'ETH/USD', 'ADA/USD', 'SOL/USD', 'XRP/USD',
+                'DOGE/USD', 'AVAX/USD', 'SHIB/USD', 'MATIC/USD', 'LTC/USD'
+            ])
+
+        # Use the ccxt instance to fetch markets
+        markets = exchange_adapter.exchange.fetch_markets()
+
         # Filter for online USD pairs and format them correctly
         usd_symbols = [
-            p['id'].replace('-', '/')
-            for p in all_products
-            if p.get('quote_currency') == 'USD' and p.get('status') == 'online'
+            m['symbol']
+            for m in markets
+            if m.get('quote') == 'USD' and m.get('active')
         ]
         # Sort alphabetically for user convenience
         usd_symbols.sort()
@@ -322,12 +329,9 @@ def get_chart_data(symbol):
     """Get chart data for a symbol"""
     try:
         if not exchange_adapter:
-            fetcher = CoinbaseDataFetcher()
-            end_date = datetime.now()
-            start_date = end_date - timedelta(days=30)
-            df = fetcher.get_historical_data(symbol, start_date.isoformat(), end_date.isoformat())
-        else:
-            df = exchange_adapter.get_historical_data(symbol, '1d', 30)
+            return jsonify({'error': 'Exchange not connected'}), 400
+
+        df = exchange_adapter.get_historical_data(symbol, '1d', 365) # Fetch 1 year of data for better charts
         
         if df.empty:
             return jsonify({'error': 'No data available'}), 404
@@ -371,8 +375,7 @@ def trading_loop():
                 continue
             
             # Get top symbols to analyze
-            fetcher = CoinbaseDataFetcher()
-            symbols = fetcher.get_top_volume_products(10)  # Analyze top 10
+            symbols = exchange_adapter.get_top_cryptocurrencies(10) # Analyze top 10
             
             for symbol in symbols:
                 if not trading_active:

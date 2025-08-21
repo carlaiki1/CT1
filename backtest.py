@@ -16,7 +16,7 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings('ignore')
 
-from exchange_adapter import CoinbaseDataFetcher
+from exchange_adapter import ExchangeAdapter
 from trading_agent import SMAStrategy, RSIStrategy, MACDStrategy, BollingerBandsStrategy, SignalType
 
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +28,7 @@ class BacktestEngine:
     def __init__(self, initial_capital: float = 10000, commission: float = 0.005):
         self.initial_capital = initial_capital
         self.commission = commission
-        self.data_fetcher = CoinbaseDataFetcher()
+        self.exchange_adapter = ExchangeAdapter(exchange_name='coinbase', demo_mode=True)
         
         # Initialize strategies
         self.strategies = {
@@ -51,12 +51,8 @@ class BacktestEngine:
         
         for symbol in tqdm(symbols, desc="Fetching data"):
             try:
-                df = self.data_fetcher.get_historical_data(
-                    symbol,
-                    start_date.isoformat(),
-                    end_date.isoformat(),
-                    granularity=86400  # Daily data
-                )
+                # Use ExchangeAdapter to get historical data
+                df = self.exchange_adapter.get_historical_data(symbol, '1d', years * 365)
                 
                 if not df.empty and len(df) > 100:  # Minimum data requirement
                     data[symbol] = df
@@ -224,7 +220,11 @@ class BacktestEngine:
         
         # Get top cryptocurrencies if not provided
         if symbols is None:
-            symbols = self.data_fetcher.get_top_volume_products(25)
+            symbols = [
+                'BTC/USD', 'ETH/USD', 'ADA/USD', 'SOL/USD', 'XRP/USD',
+                'DOGE/USD', 'AVAX/USD', 'SHIB/USD', 'MATIC/USD', 'LTC/USD',
+                'UNI/USD', 'LINK/USD', 'ALGO/USD', 'BCH/USD', 'XLM/USD'
+            ]
         
         # Fetch historical data
         historical_data = self.fetch_historical_data(symbols, years)
