@@ -609,6 +609,7 @@ class TradingAgent:
             
             if order:
                 # Record the closing trade
+                duration = datetime.now() - position.timestamp
                 self.trade_history.append({
                     'symbol': symbol,
                     'side': opposite_side,
@@ -617,6 +618,7 @@ class TradingAgent:
                     'reason': reason,
                     'pnl': position.pnl,
                     'pnl_percentage': position.pnl_percentage,
+                    'duration_seconds': duration.total_seconds(),
                     'timestamp': datetime.now().isoformat(),
                     'order_id': order.get('id')
                 })
