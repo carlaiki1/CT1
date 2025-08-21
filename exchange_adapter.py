@@ -351,130 +351,23 @@ class ExchangeAdapter:
             logger.error(f"❌ Error fetching trading fees: {e}")
             return {'maker': 0.005, 'taker': 0.005}
 
-class CoinbaseDataFetcher:
-    """Specialized class for fetching Coinbase historical data for backtesting"""
-    
-    def __init__(self):
-        self.base_url = "https://api.coinbase.com"
-    
-    def get_products(self) -> List[Dict]:
-        """Get all available trading products"""
-        try:
-            # Note: The Advanced Trade API endpoint for products is /api/v3/brokerage/products
-            response = requests.get(f"{self.base_url}/api/v3/brokerage/products")
-            response.raise_for_status()
-            # The actual products are in a 'products' key
-            return response.json().get('products', [])
-        except Exception as e:
-            logger.error(f"❌ Error fetching products: {e}")
-            return []
-    
-    def get_top_volume_products(self, limit: int = 25) -> List[str]:
-        """Get top products by 24h volume"""
-        try:
-            products = self.get_products()
-            usd_products = []
-            
-            for product in products:
-                # Check for quote currency and status
-                if product.get('quote_currency_id') == 'USD' and product.get('status') == 'online':
-                    try:
-                        # The volume is now part of the product details, no separate stats call needed
-                        volume = float(product.get('volume_24h', 0))
-                        if volume > 0 and len(product['product_id'].split('-')[0]) > 1:
-                            usd_products.append({
-                                'id': product['product_id'],
-                                'volume': volume
-                            })
-                    except (ValueError, TypeError):
-                        # Ignore if volume is not a valid number
-                        continue
-            
-            # Sort by volume and return top symbols
-            usd_products.sort(key=lambda x: x['volume'], reverse=True)
-            # The product_id is already in the format 'BTC-USD'
-            return [product['id'].replace('-', '/') for product in usd_products[:limit]]
-            
-        except Exception as e:
-            logger.error(f"❌ Error fetching top volume products: {e}")
-            # Return default list
-            return [
-                'BTC/USD', 'ETH/USD', 'ADA/USD', 'SOL/USD', 'XRP/USD',
-                'DOT/USD', 'DOGE/USD', 'AVAX/USD', 'SHIB/USD', 'MATIC/USD',
-                'LTC/USD', 'UNI/USD', 'LINK/USD', 'ALGO/USD', 'BCH/USD',
-                'XLM/USD', 'VET/USD', 'ICP/USD', 'FIL/USD', 'TRX/USD',
-                'ETC/USD', 'THETA/USD', 'AAVE/USD', 'ATOM/USD', 'XTZ/USD'
-            ]
-    
-    def get_historical_data(self, symbol: str, start_date: str, end_date: str, granularity: str = "ONE_DAY") -> pd.DataFrame:
-        """
-        Get historical candle data
-        granularity: ONE_MINUTE, FIVE_MINUTE, FIFTEEN_MINUTE, THIRTY_MINUTE, ONE_HOUR, TWO_HOUR, SIX_HOUR, ONE_DAY
-        """
-        try:
-            product_id = symbol.replace('/', '-')
-            # The Advanced Trade API endpoint for candles is different
-            url = f"{self.base_url}/api/v3/brokerage/market/products/{product_id}/candles"
-            
-            # The API expects start and end times as Unix timestamps
-            start_ts = int(datetime.fromisoformat(start_date).timestamp())
-            end_ts = int(datetime.fromisoformat(end_date).timestamp())
-
-            params = {
-                'start': start_ts,
-                'end': end_ts,
-                'granularity': granularity
-            }
-            
-            response = requests.get(url, params=params)
-            response.raise_for_status()
-            # Candles are in a 'candles' key
-            data = response.json().get('candles', [])
-            
-            if not data:
-                return pd.DataFrame()
-            
-            # Convert to DataFrame
-            # The new API returns: start, low, high, open, close, volume
-            df = pd.DataFrame(data, columns=['timestamp', 'low', 'high', 'open', 'close', 'volume'])
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
-            df = df.sort_values('timestamp')
-            df.set_index('timestamp', inplace=True)
-            
-            # Convert to numeric
-            for col in ['low', 'high', 'open', 'close', 'volume']:
-                df[col] = pd.to_numeric(df[col])
-            
-            return df
-            
-        except Exception as e:
-            logger.error(f"❌ Error fetching historical data for {symbol}: {e}")
-            return pd.DataFrame()
-
 if __name__ == "__main__":
     # Test the exchange adapter
     print("🧪 Testing Exchange Adapter...")
     
-    # Test Coinbase data fetcher
-    fetcher = CoinbaseDataFetcher()
-    top_cryptos = fetcher.get_top_volume_products(5)
-    print(f"📊 Top 5 cryptocurrencies: {top_cryptos}")
-    
-    if top_cryptos:
-        symbol = top_cryptos[0]
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+    # You can add test logic for ExchangeAdapter here if needed
+    # For example, initializing it in demo mode
+    try:
+        adapter = ExchangeAdapter('coinbase', demo_mode=True)
+        balance = adapter.get_account_balance()
+        print(f"Demo mode balance: {balance.get('USD')}")
         
-        df = fetcher.get_historical_data(
-            symbol, 
-            start_date.isoformat(), 
-            end_date.isoformat(),
-            granularity='ONE_DAY' # Use new granularity format
-        )
+        ticker = adapter.get_ticker('BTC/USD')
+        print(f"Demo mode ticker for BTC/USD: {ticker}")
         
-        if not df.empty:
-            print(f"📈 {symbol} data shape: {df.shape}")
-            print(f"📅 Date range: {df.index.min()} to {df.index.max()}")
-            print(df.head())
-        else:
-            print(f"❌ No data retrieved for {symbol}")
+        hist_data = adapter.get_historical_data('BTC/USD', limit=5)
+        print("Demo mode historical data for BTC/USD:")
+        print(hist_data.head())
+
+    except Exception as e:
+        print(f"Error testing adapter: {e}")

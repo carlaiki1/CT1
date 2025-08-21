@@ -178,12 +178,12 @@
                     <div class="card-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <select id="symbol-select" class="form-select">
-                                    <option value="">Select a symbol...</option>
+                                <select id="symbol-select" class="form-select" disabled>
+                                    <option value="">Connect to load symbols...</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <button id="analyze-btn" class="btn btn-primary">Analyze</button>
+                                <button id="analyze-btn" class="btn btn-primary" disabled>Analyze</button>
                             </div>
                         </div>
                         <div id="analysis-results"></div>
@@ -242,7 +242,6 @@
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            loadSymbols();
             updateDashboard();
             startAutoUpdate();
             
@@ -269,6 +268,9 @@
                     document.getElementById('start-trading').disabled = false;
                     document.getElementById('stop-trading').disabled = false;
                     showAlert('Successfully connected to live exchange!', 'success');
+                    loadSymbols();
+                    document.getElementById('symbol-select').disabled = false;
+                    document.getElementById('analyze-btn').disabled = false;
                 } else {
                     statusDiv.innerHTML = `<p class="text-danger">❌ ${result.message}</p>`;
                     showAlert(result.message || 'Failed to connect', 'danger');
@@ -292,6 +294,9 @@
                     document.getElementById('start-trading').disabled = false;
                     document.getElementById('stop-trading').disabled = false;
                     showAlert('Demo mode started successfully!', 'success');
+                    loadSymbols();
+                    document.getElementById('symbol-select').disabled = false;
+                    document.getElementById('analyze-btn').disabled = false;
                 } else {
                     statusDiv.innerHTML = `<p class="text-danger">❌ ${result.message}</p>`;
                     showAlert(result.message || 'Failed to start demo mode', 'danger');
