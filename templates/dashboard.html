@@ -526,36 +526,35 @@
                 return;
             }
 
+            const analysisContainer = document.getElementById('analysis-results');
+            analysisContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p>Analyzing and backtesting... This may take a moment.</p></div>';
+            document.getElementById('price-chart').innerHTML = '';
+
             try {
                 const response = await fetch(`/api/analyze/${symbol}`);
-                const analysis = await response.json();
+                const data = await response.json();
                 
                 if (response.ok) {
-                    displayAnalysis(analysis);
-                    loadChart(symbol);
+                    displayAnalysis(data);
                 } else {
-                    showAlert(analysis.error || 'Failed to analyze symbol', 'danger');
+                    analysisContainer.innerHTML = '';
+                    showAlert(data.error || 'Failed to analyze symbol', 'danger');
                 }
             } catch (error) {
+                analysisContainer.innerHTML = '';
                 showAlert('Error analyzing symbol: ' + error.message, 'danger');
             }
         }
 
         // Display analysis results
-        function displayAnalysis(analysis) {
+        function displayAnalysis(data) {
             const container = document.getElementById('analysis-results');
-            
-            let html = `<div class="row mb-3">
-                <div class="col-md-6">
-                    <h6>Current Price: $${analysis.current_price.toFixed(2)}</h6>
-                </div>
-                <div class="col-md-6">
-                    <h6>Consensus: <span class="badge bg-${getSignalColor(analysis.consensus.signal)}">${analysis.consensus.signal}</span></h6>
-                </div>
-            </div>`;
-            
-            html += '<div class="table-responsive"><table class="table table-sm">';
-            html += '<thead><tr><th>Strategy</th><th>Signal</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>';
+            const analysis = data.analysis;
+            const summary = data.backtest_summary;
+
+            let html = `<h6>Current Signals</h6>
+            <div class="table-responsive"><table class="table table-sm">
+            <thead><tr><th>Strategy</th><th>Signal</th><th>Confidence</th><th>Reason</th></tr></thead><tbody>`;
             
             analysis.signals.forEach(signal => {
                 html += `<tr>
@@ -565,9 +564,29 @@
                     <td><small>${signal.reason}</small></td>
                 </tr>`;
             });
-            
             html += '</tbody></table></div>';
+
+            html += `<h6 class="mt-4">3-Year Backtest Summary</h6>
+            <p>Best performing strategy: <strong>${summary.best_strategy}</strong> with a return of <strong class="${summary.best_return >= 0 ? 'profit' : 'loss'}">${summary.best_return.toFixed(2)}%</strong>.</p>`;
+
+            html += `<table class="table table-sm table-bordered"><thead><tr><th>Strategy</th><th>Return</th><th>Win Rate</th><th>Sharpe Ratio</th></tr></thead><tbody>`;
+            for (const [name, result] of Object.entries(summary.results)) {
+                 html += `<tr>
+                    <td>${name}</td>
+                    <td class="${result.total_return >= 0 ? 'profit' : 'loss'}">${result.total_return.toFixed(2)}%</td>
+                    <td>${result.win_rate.toFixed(1)}%</td>
+                    <td>${result.sharpe_ratio.toFixed(2)}</td>
+                </tr>`;
+            }
+            html += '</tbody></table>'
+
             container.innerHTML = html;
+
+            // Render the chart
+            if (data.chart) {
+                const chartData = JSON.parse(data.chart);
+                Plotly.newPlot('price-chart', chartData.data, chartData.layout, {responsive: true});
+            }
         }
 
         // Get signal color
@@ -576,21 +595,6 @@
                 case 'BUY': return 'success';
                 case 'SELL': return 'danger';
                 default: return 'secondary';
-            }
-        }
-
-        // Load price chart
-        async function loadChart(symbol) {
-            try {
-                const response = await fetch(`/api/chart/${symbol}`);
-                const data = await response.json();
-                
-                if (response.ok) {
-                    const chartData = JSON.parse(data.chart);
-                    Plotly.newPlot('price-chart', chartData.data, chartData.layout, {responsive: true});
-                }
-            } catch (error) {
-                console.error('Error loading chart:', error);
             }
         }
 

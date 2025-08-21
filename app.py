@@ -141,14 +141,84 @@ def get_symbols():
 
 @app.route('/api/analyze/<path:symbol>', methods=['GET'])
 def analyze_symbol(symbol):
-    """Analyze a specific symbol"""
+    """Analyze a specific symbol, run backtest, and generate chart."""
     try:
+        if not exchange_adapter:
+            return jsonify({'error': 'Exchange not connected'}), 400
+
+        # 1. Fetch historical data (3 years)
+        df = exchange_adapter.get_historical_data(symbol, '1d', 365 * 3)
+        if df.empty:
+            return jsonify({'error': 'Could not fetch historical data for analysis.'}), 404
+
+        # 2. Run backtest to find the best strategy
+        backtest_engine = BacktestEngine()
+        best_strategy_name = None
+        best_strategy_return = -1000
+        backtest_results = {}
+
+        for name, strategy in backtest_engine.strategies.items():
+            result = backtest_engine.backtest_strategy(strategy, df, symbol)
+            backtest_results[name] = {
+                'total_return': result.get('total_return', 0),
+                'win_rate': result.get('win_rate', 0),
+                'sharpe_ratio': result.get('sharpe_ratio', 0)
+            }
+            if result.get('total_return', -1000) > best_strategy_return:
+                best_strategy_return = result['total_return']
+                best_strategy_name = name
+                best_strategy_trades = result.get('trades', [])
+
+        # 3. Get current signal analysis
         if not trading_agent:
             return jsonify({'error': 'Trading agent not initialized'}), 400
+        analysis = trading_agent.analyze_symbol(symbol, df=df)
+
+        # 4. Generate chart with overlays
+        traces = []
+        # Candlestick trace
+        traces.append(go.Candlestick(
+            x=df.index, open=df['open'], high=df['high'], low=df['low'], close=df['close'],
+            name=symbol
+        ))
+
+        # Add trade markers
+        if best_strategy_trades:
+            buy_trades = [t for t in best_strategy_trades if t['type'] == 'buy']
+            sell_trades = [t for t in best_strategy_trades if t['type'] == 'sell']
+
+            traces.append(go.Scatter(
+                x=[t['date'] for t in buy_trades],
+                y=[t['price'] for t in buy_trades],
+                mode='markers', name='Buy Signal',
+                marker=dict(color='green', size=10, symbol='triangle-up')
+            ))
+            traces.append(go.Scatter(
+                x=[t['date'] for t in sell_trades],
+                y=[t['price'] for t in sell_trades],
+                mode='markers', name='Sell Signal',
+                marker=dict(color='red', size=10, symbol='triangle-down')
+            ))
         
-        analysis = trading_agent.analyze_symbol(symbol)
-        return jsonify(analysis)
+        layout = go.Layout(
+            title=f'{symbol} Price Chart with {best_strategy_name} Trades',
+            xaxis=dict(title='Date'), yaxis=dict(title='Price (USD)'),
+            template='plotly_white', legend=dict(x=0, y=1, traceorder='normal')
+        )
         
+        fig = go.Figure(data=traces, layout=layout)
+        chart_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+        return jsonify({
+            'analysis': analysis,
+            'backtest_summary': {
+                'best_strategy': best_strategy_name,
+                'best_return': best_strategy_return,
+                'results': backtest_results
+            },
+            'chart': chart_json
+        })
+
     except Exception as e:
         logger.error(f"❌ Error analyzing {symbol}: {e}")
         return jsonify({'error': str(e)}), 500
@@ -322,44 +392,6 @@ def run_backtest():
         
     except Exception as e:
         logger.error(f"❌ Error running backtest: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/chart/<path:symbol>')
-def get_chart_data(symbol):
-    """Get chart data for a symbol"""
-    try:
-        if not exchange_adapter:
-            return jsonify({'error': 'Exchange not connected'}), 400
-
-        df = exchange_adapter.get_historical_data(symbol, '1d', 365) # Fetch 1 year of data for better charts
-        
-        if df.empty:
-            return jsonify({'error': 'No data available'}), 404
-        
-        # Create candlestick chart
-        trace = go.Candlestick(
-            x=df.index,
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            name=symbol
-        )
-        
-        layout = go.Layout(
-            title=f'{symbol} Price Chart',
-            xaxis=dict(title='Date'),
-            yaxis=dict(title='Price (USD)'),
-            template='plotly_white'
-        )
-        
-        fig = go.Figure(data=[trace], layout=layout)
-        graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-        
-        return jsonify({'chart': graphJSON})
-        
-    except Exception as e:
-        logger.error(f"❌ Error generating chart for {symbol}: {e}")
         return jsonify({'error': str(e)}), 500
 
 def trading_loop():

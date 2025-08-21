@@ -433,11 +433,12 @@ class TradingAgent:
         ]
         return strategies
     
-    def analyze_symbol(self, symbol: str, timeframe: str = '1d', limit: int = 100) -> Dict:
+    def analyze_symbol(self, symbol: str, timeframe: str = '1d', limit: int = 100, df: pd.DataFrame = None) -> Dict:
         """Analyze a symbol using all strategies"""
         try:
-            # Get historical data
-            df = self.exchange.get_historical_data(symbol, timeframe, limit)
+            # Get historical data if not provided
+            if df is None:
+                df = self.exchange.get_historical_data(symbol, timeframe, limit)
             
             if df.empty:
                 logger.warning(f"⚠️ No data available for {symbol}")
