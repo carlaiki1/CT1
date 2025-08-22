@@ -1,0 +1,19 @@
+# Ignore Python virtual environment
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore build artifacts
+build/
+dist/
+*.egg-info/
+
+# Ignore test reports
+.coverage
+htmlcov/
+
+# Ignore sensitive files
+.env
+trader_state.json

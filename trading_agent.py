@@ -12,40 +12,7 @@ import json
 import time
 from dataclasses import dataclass
 from enum import Enum
-
-# Manual implementation of technical indicators
-def sma(data, window):
-    """Simple Moving Average"""
-    return data.rolling(window=window).mean()
-
-def ema(data, window):
-    """Exponential Moving Average"""
-    return data.ewm(span=window).mean()
-
-def rsi(data, window=14):
-    """Relative Strength Index"""
-    delta = data.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-def macd(data, fast=12, slow=26, signal=9):
-    """MACD indicator"""
-    ema_fast = ema(data, fast)
-    ema_slow = ema(data, slow)
-    macd_line = ema_fast - ema_slow
-    signal_line = ema(macd_line, signal)
-    histogram = macd_line - signal_line
-    return macd_line, signal_line, histogram
-
-def bollinger_bands(data, window=20, std_dev=2):
-    """Bollinger Bands"""
-    middle = sma(data, window)
-    std = data.rolling(window=window).std()
-    upper = middle + (std * std_dev)
-    lower = middle - (std * std_dev)
-    return upper, middle, lower
+import talib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -102,8 +69,8 @@ class SMAStrategy(TradingStrategy):
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate SMA indicators"""
         df = df.copy()
-        df['sma_short'] = sma(df['close'], self.short_window)
-        df['sma_long'] = sma(df['close'], self.long_window)
+        df['sma_short'] = talib.SMA(df['close'], timeperiod=self.short_window)
+        df['sma_long'] = talib.SMA(df['close'], timeperiod=self.long_window)
         df['sma_signal'] = np.where(df['sma_short'] > df['sma_long'], 1, -1)
         df['sma_position'] = df['sma_signal'].diff()
         return df
@@ -180,7 +147,7 @@ class RSIStrategy(TradingStrategy):
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate RSI indicator"""
         df = df.copy()
-        df['rsi'] = rsi(df['close'], self.period)
+        df['rsi'] = talib.RSI(df['close'], timeperiod=self.period)
         return df
     
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> TradingSignal:
@@ -251,11 +218,11 @@ class MACDStrategy(TradingStrategy):
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate MACD indicators"""
         df = df.copy()
-        macd_line, macd_signal, macd_hist = macd(
+        macd_line, macd_signal, macd_hist = talib.MACD(
             df['close'], 
-            fast=self.fast_period,
-            slow=self.slow_period,
-            signal=self.signal_period
+            fastperiod=self.fast_period,
+            slowperiod=self.slow_period,
+            signalperiod=self.signal_period
         )
         df['macd'] = macd_line
         df['macd_signal'] = macd_signal
@@ -334,10 +301,12 @@ class BollingerBandsStrategy(TradingStrategy):
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate Bollinger Bands indicators"""
         df = df.copy()
-        upper, middle, lower = bollinger_bands(
+        upper, middle, lower = talib.BBANDS(
             df['close'], 
-            window=self.period,
-            std_dev=self.std_dev
+            timeperiod=self.period,
+            nbdevup=self.std_dev,
+            nbdevdn=self.std_dev,
+            matype=0
         )
         df['bb_upper'] = upper
         df['bb_middle'] = middle

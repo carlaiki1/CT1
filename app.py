@@ -105,6 +105,7 @@ def get_balance():
             return jsonify({'error': 'Exchange not configured'}), 400
         
         balance = exchange_adapter.get_account_balance()
+        logger.info(f"💰 Balance fetched: {balance}")
         return jsonify(balance)
         
     except Exception as e:
@@ -122,18 +123,21 @@ def get_symbols():
                 'DOGE/USD', 'AVAX/USD', 'SHIB/USD', 'MATIC/USD', 'LTC/USD'
             ])
 
+        # Get quote currency from request args, default to USD
+        quote_currency = request.args.get('quote', 'USD').upper()
+
         # Use the ccxt instance to fetch markets
         markets = exchange_adapter.exchange.fetch_markets()
 
-        # Filter for online USD pairs and format them correctly
-        usd_symbols = [
+        # Filter for online pairs with the specified quote currency
+        symbols = [
             m['symbol']
             for m in markets
-            if m.get('quote') == 'USD' and m.get('active')
+            if m.get('quote') == quote_currency and m.get('active')
         ]
         # Sort alphabetically for user convenience
-        usd_symbols.sort()
-        return jsonify(usd_symbols)
+        symbols.sort()
+        return jsonify(symbols)
         
     except Exception as e:
         logger.error(f"❌ Error fetching symbols: {e}")
@@ -408,6 +412,7 @@ def trading_loop():
             
             # Get top symbols to analyze
             symbols = exchange_adapter.get_top_cryptocurrencies(10) # Analyze top 10
+            logger.info(f"🤖 Analyzing symbols: {symbols}")
             
             for symbol in symbols:
                 if not trading_active:
