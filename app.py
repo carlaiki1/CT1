@@ -105,6 +105,7 @@ def get_balance():
             return jsonify({'error': 'Exchange not configured'}), 400
         
         balance = exchange_adapter.get_account_balance()
+        logger.info(f"💰 Balance fetched: {balance}")
         return jsonify(balance)
         
     except Exception as e:
@@ -411,6 +412,7 @@ def trading_loop():
             
             # Get top symbols to analyze
             symbols = exchange_adapter.get_top_cryptocurrencies(10) # Analyze top 10
+            logger.info(f"🤖 Analyzing symbols: {symbols}")
             
             for symbol in symbols:
                 if not trading_active:

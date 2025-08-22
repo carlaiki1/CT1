@@ -255,6 +255,15 @@ class ExchangeAdapter:
 
     def get_top_cryptocurrencies(self, limit: int = 25) -> List[str]:
         """Get top cryptocurrencies by volume"""
+        if self.demo_mode:
+            return [
+                'BTC/USD', 'ETH/USD', 'ADA/USD', 'SOL/USD', 'XRP/USD',
+                'DOT/USD', 'DOGE/USD', 'AVAX/USD', 'SHIB/USD', 'MATIC/USD',
+                'LTC/USD', 'UNI/USD', 'LINK/USD', 'ALGO/USD', 'BCH/USD',
+                'XLM/USD', 'VET/USD', 'ICP/USD', 'FIL/USD', 'TRX/USD',
+                'ETC/USD', 'THETA/USD', 'AAVE/USD', 'ATOM/USD', 'XTZ/USD'
+            ][:limit]
+
         try:
             tickers = self.exchange.fetch_tickers()
             

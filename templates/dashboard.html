@@ -106,12 +106,20 @@
             <div class="col-md-3">
                 <div class="card metric-card">
                     <div class="card-body text-center">
+                        <h5 class="card-title text-muted">Account Balance</h5>
+                        <h3 id="account-balance" class="mb-0">$0.00</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
                         <h5 class="card-title text-muted">Total P&L</h5>
                         <h3 id="total-pnl" class="mb-0">$0.00</h3>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card metric-card">
                     <div class="card-body text-center">
                         <h5 class="card-title text-muted">Win Rate</h5>
@@ -348,6 +356,11 @@
                 const status = await statusResponse.json();
                 updateTradingStatus(status.active);
 
+                // Update balance
+                const balanceResponse = await fetch('/api/balance');
+                const balance = await balanceResponse.json();
+                updateBalance(balance);
+
                 // Update performance metrics
                 const perfResponse = await fetch('/api/performance');
                 const performance = await perfResponse.json();
@@ -380,6 +393,16 @@
             } else {
                 indicator.className = 'status-indicator status-inactive';
                 text.textContent = 'Inactive';
+            }
+        }
+
+        // Update balance card
+        function updateBalance(balance) {
+            const balanceElement = document.getElementById('account-balance');
+            if (balance && balance.USD) {
+                balanceElement.textContent = `$${(balance.USD.total || 0).toFixed(2)}`;
+            } else {
+                balanceElement.textContent = '$0.00';
             }
         }
 
