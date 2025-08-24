@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 def _read_keys_from_file(filename="API.txt"):
     """Reads API key and secret from the JSON file downloaded from Coinbase."""
+    print("!!!!!!!!!! TRYING TO READ API.TXT NOW !!!!!!!!!!!") # <-- ADD THIS LINE
     try:
         if os.path.exists(filename):
             with open(filename, 'r') as f:
@@ -57,6 +58,14 @@ class ExchangeAdapter:
         # If keys are found, we are not in demo mode. Otherwise, we are.
         self.demo_mode = not (self.api_key and self.api_secret)
         self.exchange = None
+
+	# Store the demo balance if in demo mode
+        if self.demo_mode:
+            self.demo_portfolio = {
+                'USD': {'free': demo_balance_usd, 'used': 0.0, 'total': demo_balance_usd},
+                'BTC': {'free': 0.0, 'used': 0.0, 'total': 0.0},
+                'ETH': {'free': 0.0, 'used': 0.0, 'total': 0.0}
+            }
 
         logger.info(f"Starting in {'Demo Mode' if self.demo_mode else 'Live Mode'}")
         
@@ -102,22 +111,19 @@ class ExchangeAdapter:
                 logger.error(f"❌ Failed to initialize {self.exchange_name}: {e}")
                 raise
 
-    def get_account_balance(self) -> Dict:
-        """Get account balance"""
-        try:
-            if self.demo_mode:
-                return {
-                    'USD': {'free': 10000.0, 'used': 0.0, 'total': 10000.0},
-                    'BTC': {'free': 0.0, 'used': 0.0, 'total': 0.0},
-                    'ETH': {'free': 0.0, 'used': 0.0, 'total': 0.0}
-                }
-            
-            balance = self.exchange.fetch_balance()
-            return balance
-            
-        except Exception as e:
-            logger.error(f"❌ Error fetching balance: {e}")
-            return {}
+   def get_account_balance(self) -> Dict:
+    """Get account balance"""
+    try:
+        if self.demo_mode:
+            # This uses the portfolio variable that can be updated by trades
+            return self.demo_portfolio
+        
+        balance = self.exchange.fetch_balance()
+        return balance
+        
+    except Exception as e:
+        logger.error(f"❌ Error fetching balance: {e}")
+        return {}
 
     def get_ticker(self, symbol: str) -> Dict:
         """Get current ticker data for a symbol"""
